@@ -72,6 +72,9 @@ public:
 	// Sets default values for this actor's properties
 	AItemActor();
 
+	UPROPERTY(EditAnywhere)
+		class USkeletalMeshComponent* MeshComponent;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -84,7 +87,7 @@ protected:
 	void LoadItemInfo(FName Name);
 
 	// skeletal mesh component
-	class USkeletalMeshComponent* MeshComponent;
+	
 
 	//collision component
 	class UCapsuleComponent* CapsuleComponent;
@@ -120,4 +123,14 @@ public:
 	virtual bool UseItem();
 
 	void ReduceUsedBagSpace();
+
+	//weapon base
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class AWeaponItemActor> WeaponClass;
+
+	class AWeaponItemActor* Weapon;
+
+	class ARPG_Souls_likeCharacter* BaseCharacter;
+
+	bool Pickable;
 };

@@ -47,6 +47,8 @@ public:
 	class UTextBlock* CharacterEndurance;
 	class UTextBlock* CharacterResistance;
 	class UTextBlock* CharacterMovementSpeed;
+	class UTextBlock* CharacterPhysics;
+	class UTextBlock* CharacterMagic;
 
 private:
 	class ARPG_Souls_likeCharacter* BaseCharacter;
@@ -59,4 +61,63 @@ private:
 	UFUNCTION()
 		FText GetHealth();
 
+	//mp text block
+	UFUNCTION()
+		FText GetMana();
+
+	//stamina text block
+	UFUNCTION()
+		FText GetStamina();
+
+	//level text block
+	UFUNCTION()
+		FText GetLevel();
+
+	//vitality text block
+	UFUNCTION()
+		FText GetVitality();
+
+	//attunement
+	UFUNCTION()
+		FText GetAttunement();
+
+	//strength text block
+	UFUNCTION()
+		FText GetStrength();
+
+	//agility text block
+	UFUNCTION()
+		FText GetAgility();
+
+	//intelligence text block
+	UFUNCTION()
+		FText GetIntelligence();
+
+	//endurance text block
+	UFUNCTION()
+		FText GetEndurance();
+
+	//resistance text block
+	UFUNCTION()
+		FText GetResistance();
+
+	//movement speed text block
+	UFUNCTION()
+		FText GetMovementSpeed();
+
+	//max exp text block
+	UFUNCTION()
+		FText GetMaxExp();
+
+	//current exp text block
+	UFUNCTION()
+		FText GetCurrentExp();
+
+	//physics damage
+	UFUNCTION()
+		FText GetPhysics();
+
+	//magic damage
+	UFUNCTION()
+		FText GetMagic();
 };

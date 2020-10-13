@@ -27,4 +27,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	float Direction;
+
+	UPROPERTY(BlueprintReadOnly)
+		bool IsInAir;
 };

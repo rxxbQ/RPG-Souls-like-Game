@@ -8,6 +8,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Inventory/WeaponItemActor.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ARPG_Souls_likeCharacter
@@ -19,7 +22,7 @@ ARPG_Souls_likeCharacter::ARPG_Souls_likeCharacter()
 
 	//initial location and rotation
 	GetMesh()->SetRelativeLocation(FVector(0, -10, -83));
-	GetMesh()->SetRelativeRotation(FRotator(0, -90, 0));
+	GetMesh()->SetRelativeRotation(FRotator(0, 0, -90));
 
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
@@ -53,6 +56,20 @@ ARPG_Souls_likeCharacter::ARPG_Souls_likeCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 
+	SetupStimulus();
+
+}
+
+void ARPG_Souls_likeCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	ARPG_Souls_likeCharacter::SpawnWeapon();
+
+	Weapon->WeaponCollisionBox->OnComponentHit.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackHit);
+
+	//Weapon->WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackOverlapBegin);
+	//Weapon->WeaponCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackOverlapEnd);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -82,8 +99,15 @@ void ARPG_Souls_likeCharacter::SetupPlayerInputComponent(class UInputComponent* 
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ARPG_Souls_likeCharacter::OnResetVR);
-}
 
+	// attack functionality
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ARPG_Souls_likeCharacter::AttackInput);
+	PlayerInputComponent->BindAction("Attack", IE_Released, this, &ARPG_Souls_likeCharacter::AttackEnd);
+
+	//PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &ARPG_Souls_likeCharacter::SpawnWeapon);
+
+	
+}
 
 void ARPG_Souls_likeCharacter::OnResetVR()
 {
@@ -139,9 +163,48 @@ void ARPG_Souls_likeCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
+}
 
+void ARPG_Souls_likeCharacter::AttackStart()
+{
+	Weapon->WeaponCollisionBox->SetCollisionProfileName("Weapon");
+	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(true);
+	//Weapon->WeaponCollisionBox->SetGenerateOverlapEvents(true);
+
+	//UE_LOG(LogTemp, Warning, TEXT("%s"), *Weapon->WeaponCollisionBox->GetCollisionProfileName().ToString());
+}
+
+void ARPG_Souls_likeCharacter::AttackEnd()
+{
+	Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
+	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(false);
+	//Weapon->WeaponCollisionBox->SetGenerateOverlapEvents(false);
+
+	//UE_LOG(LogTemp, Warning, TEXT("%s"), *Weapon->WeaponCollisionBox->GetCollisionProfileName().ToString());
+}
+
+void ARPG_Souls_likeCharacter::AttackInput()
+{
 
 }
+
+void ARPG_Souls_likeCharacter::OnAttackHit(UPrimitiveComponent* HitComponent,
+	AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogTemp, Warning, TEXT("hit: %s"), *Hit.GetActor()->GetName());
+}
+
+void ARPG_Souls_likeCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
+	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("overlap begin: %s"), *OtherActor->GetName());
+}
+
+void ARPG_Souls_likeCharacter::OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	UE_LOG(LogTemp, Warning, TEXT("overlap end: %s"), *OtherActor->GetName());
+}
+
 
 FText ARPG_Souls_likeCharacter::GetCharacterClass()
 {
@@ -171,19 +234,64 @@ FText ARPG_Souls_likeCharacter::GetCharacterClass()
 	return FText();
 }
 
-FText ARPG_Souls_likeCharacter::GetCharacterBasic(int32 Max, int32 Current)
+FText ARPG_Souls_likeCharacter::GetCharacterBasic(int32 Max, int32 Current, FString String)
 {
-	FString NewString = TEXT("HP : ")+ FString::FromInt(Max) + TEXT(" / ") + FString::FString::FromInt(Current);
+	FString NewString = String+ FString::FromInt(Current) + TEXT(" / ") + FString::FString::FromInt(Max);
 	
 	return FText::FromString(NewString);
 }
 
-FText ARPG_Souls_likeCharacter::GetCharacterAttribute(int32 SelfAttribute, int32 WeaponAttribute, int32 OutAttribute)
+FText ARPG_Souls_likeCharacter::GetCharacterAttribute(int32 SelfAttribute, FString String)
 {
-	return FText();
+	int32 OutAttribute;
+	int32 WeaponAttribute = 0;
+	OutAttribute = SelfAttribute + WeaponAttribute;
+
+	FString NewString = String + FString::FromInt(SelfAttribute) + TEXT(" Weapon : ") + FString::FromInt(WeaponAttribute) + TEXT(" Total : ") + FString::FromInt(OutAttribute);
+	
+	return FText::FromString(NewString);
 }
 
-FText ARPG_Souls_likeCharacter::GetCharacterOneAttribute(float Attribute)
+void ARPG_Souls_likeCharacter::SpawnWeapon()
 {
-	return FText();
+	
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.bNoFail = true;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	
+		if (WeaponClass) {
+			FTransform WeaponTransform;
+			WeaponTransform.SetLocation(FVector::ZeroVector);
+			WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
+
+			Weapon = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
+			
+			if (Weapon) {
+				//UE_LOG(LogTemp, Warning, TEXT("%d"), Weapon->WeaponNum);
+				//if (Weapon->WeaponNum != 0) {
+				//	if (Weapon->WeaponNum == 1) {
+				//		Weapon->WeaponOnHand = FName(TEXT("BlackKnight"));
+				//	}
+				//	else if (Weapon->WeaponNum == 3) {
+				//		Weapon->WeaponOnHand = FName(TEXT("DragonSword"));
+				//	}
+				//	Weapon->SetActorEnableCollision(false);
+					Weapon->SetupWeapon(FName("BlackKnight"));
+					Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_r"));
+					Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
+					Weapon->Pickable = false;
+				//}
+			}
+		}
+		
 }
+
+void ARPG_Souls_likeCharacter::SetupStimulus()
+{
+	Stimulus = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("Stimulus"));
+	Stimulus->RegisterForSense(TSubclassOf<UAISense_Sight>());
+	Stimulus->RegisterWithPerceptionSystem();
+}
+
+

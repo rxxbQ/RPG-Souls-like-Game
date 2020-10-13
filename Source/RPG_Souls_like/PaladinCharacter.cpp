@@ -17,9 +17,16 @@ APaladinCharacter::APaladinCharacter()
 	//set model
 	GetMesh()->SetSkeletalMesh(PaladinSkeletalMesh);
 
+	//load animation instance
 	static ConstructorHelpers::FClassFinder<UAnimInstance> PaladinAnim(TEXT("AnimBlueprint'/Game/Assets/AnimBP/Paladin_BP.Paladin_BP_C'"));
 	if (PaladinAnim.Class) {
 		GetMesh()->SetAnimInstanceClass(PaladinAnim.Class);
+	}
+
+	//load animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> AttackMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Paladin_Montage.Paladin_Montage'"));
+	if (AttackMontageObject.Succeeded()) {
+		AttackMontage = AttackMontageObject.Object;
 	}
 
 	/* initialize attribute*/
@@ -61,8 +68,31 @@ APaladinCharacter::APaladinCharacter()
 
 	CharacterAttribute.CharacterMovementSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
-	//CharacterAttribute.CharacterAttackDamage;
+	CharacterAttribute.CharacterAttackDamage = 0;
 
-	//CharacterAttribute.CharacterMagicDamage;
+	CharacterAttribute.CharacterMagicDamage = 0;
 	
 }
+
+void APaladinCharacter::AttackStart()
+{
+	ARPG_Souls_likeCharacter::AttackStart();
+}
+
+void APaladinCharacter::AttackEnd()
+{
+	ARPG_Souls_likeCharacter::AttackEnd();
+	//PlayAnimMontage(AttackMontage, 1.0f, FName("end_1"));
+}
+
+void APaladinCharacter::AttackInput()
+{
+	//generate a random number between 1 and 3
+	int MontageSectionIndex = rand() % 2 + 1;
+
+	//fstring animation section
+	FString MontageSection = "start_" + FString::FromInt(MontageSectionIndex);
+
+	PlayAnimMontage(AttackMontage, 1.0f, FName(*MontageSection));
+}
+

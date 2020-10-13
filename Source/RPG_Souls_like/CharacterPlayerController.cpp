@@ -53,6 +53,7 @@ void ACharacterPlayerController::CharacterMoveTypeChange()
 				Ch->GetCharacterMovement()->MaxWalkSpeed = 300;
 				break;
 			}
+
 		}
 	}
 }

@@ -87,6 +87,7 @@ class ARPG_Souls_likeCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
 public:
 	ARPG_Souls_likeCharacter();
 
@@ -132,6 +133,8 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -142,6 +145,12 @@ protected:
 	/* character attribute */
 	FCharacterAttribute CharacterAttribute;
 
+	//weapon base
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class AWeaponItemActor> WeaponClass;
+
+	class AWeaponItemActor* Weapon;
+
 public:
 	/* get attribute text block*/
 	//get character class
@@ -150,16 +159,61 @@ public:
 
 	//get character health, mana, stamina, exp
 	UFUNCTION()
-	FText GetCharacterBasic(int32 Max, int32 Current);
+	FText GetCharacterBasic(int32 Max, int32 Current, FString String);
 
 	//get character vitality, attunement, endurence, strength, agility, intelligence
 	UFUNCTION()
-	FText GetCharacterAttribute(int32 SelfAttribute, int32 WeaponAttribute, int32 OutAttribute);
+	FText GetCharacterAttribute(int32 SelfAttribute, FString String);
 	
-	//get one attribute
-	UFUNCTION()
-	FText GetCharacterOneAttribute(float Attribute);
-
 	FORCEINLINE FCharacterAttribute GetCharacterProperty() { return CharacterAttribute; }
+
+	//spawn weapon
+	void SpawnWeapon();
+
+
+	virtual void BeginPlay() override;
+
+	class ACharacterPlayerController* Pc;
+
+	/**
+	* AttackStart - trigger when the player initiates an attack
+	*/
+	virtual void AttackStart();
+
+	/**
+	* AttackEnd - trigger when the player stops an attack
+	*/
+	virtual void AttackEnd();
+
+	/**
+	* AttackInput - trigger attack animations based on user input
+	*/
+	virtual void AttackInput();
+
+	/**
+	* OnAttackHit - triggerred when the collision hit event fires between the weapon and enmy eneities
+	*/
+	UFUNCTION()
+	void OnAttackHit(UPrimitiveComponent* HitComponent, 
+		AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	/**
+	* OnAttackOverlapBegin - triggerred when the collider overlaps another component
+	*/
+	UFUNCTION()
+		void OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
+			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/**
+	* OnAttackOverlapEnd - triggerred when the collider stops overlapping another component
+	*/
+	UFUNCTION()
+		void OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+private:
+	class UAIPerceptionStimuliSourceComponent* Stimulus;
+
+	void SetupStimulus();
+
 };
 

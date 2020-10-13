@@ -55,6 +55,7 @@ public:
 	//item amount text
 	void AddItemAmountText(uint8 LocalAmount);
 
+	class ARPG_Souls_likeCharacter* BaseCharacter;
 private:
 
 	//mouse down event

@@ -127,11 +127,13 @@ FEventReply UInventoryUserWidget::MouseUpEvent(FGeometry MyGeometry, const FPoin
 
 				//detect item type and reduce current bag space used
 				ACharacterPlayerController* Pc = Cast<ACharacterPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+
 				if (Pc) {
 					switch (ItemActor->ItemAllType.ItemType.GetValue()) {
 					case E_Weapon:
 						UE_LOG(LogTemp, Warning, TEXT("weapon"));
 						LocalItemUserWidget = Pc->BagUserWidget->WeaponItemUserWidget;
+					
 						break;
 					case E_Consumable:
 						UE_LOG(LogTemp, Warning, TEXT("consumable"));

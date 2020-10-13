@@ -7,6 +7,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "RPG_Souls_like/ItemUserWidget.h"
 #include "RPG_Souls_like/BagUserWidget.h"
+//#include "WeaponItemActor.h"
+//#include "RPG_Souls_like/RPG_Souls_likeCharacter.h"
 
 // Sets default values
 AItemActor::AItemActor()
@@ -39,6 +41,7 @@ AItemActor::AItemActor()
 
 	PickUpItemAmount = 1;
 
+	Pickable = true;
 }
 
 // Called when the game starts or when spawned
@@ -62,7 +65,9 @@ void AItemActor::LoadItemInfo(FName Name)
 void AItemActor::OnOverlapEvent(UPrimitiveComponent* OverlappedComponent, 
 	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	ItemPickUpEvent(OtherActor);
+	if (Pickable) {
+		ItemPickUpEvent(OtherActor);
+	}
 }
 
 bool AItemActor::ItemPickUpEvent(AActor* OtherActor)
@@ -189,6 +194,27 @@ bool AItemActor::ItemIsTheSame(uint16& Index, UItemUserWidget* ItemBag)
 
 bool AItemActor::UseItem()
 {
+	//get character object
+	//BaseCharacter = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GEngine->GetWorldContexts()[0].World(), 0));
+	//BaseCharacter->SpawnWeapon();
+	/*
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.bNoFail = true;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	if (WeaponClass) {
+		FTransform WeaponTransform;
+		WeaponTransform.SetLocation(FVector::ZeroVector);
+		WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
+
+		Weapon = GEngine->GetWorldContexts()[0].World()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
+
+		if (Weapon) {
+			Weapon->AttachToComponent(BaseCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_r"));
+			Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
+		}
+	}
+	*/
 	return false;
 }
 
