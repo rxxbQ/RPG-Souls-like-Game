@@ -11,6 +11,10 @@
 #include "Inventory/WeaponItemActor.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
+#include "Perception/AISense_Hearing.h"
+#include "AI/AITags.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ARPG_Souls_likeCharacter
@@ -105,6 +109,8 @@ void ARPG_Souls_likeCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	PlayerInputComponent->BindAction("Attack", IE_Released, this, &ARPG_Souls_likeCharacter::AttackEnd);
 
 	//PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &ARPG_Souls_likeCharacter::SpawnWeapon);
+
+	PlayerInputComponent->BindAction("Distract", IE_Pressed, this, &ARPG_Souls_likeCharacter::OnDistract);
 
 	
 }
@@ -292,6 +298,15 @@ void ARPG_Souls_likeCharacter::SetupStimulus()
 	Stimulus = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("Stimulus"));
 	Stimulus->RegisterForSense(TSubclassOf<UAISense_Sight>());
 	Stimulus->RegisterWithPerceptionSystem();
+}
+
+void ARPG_Souls_likeCharacter::OnDistract()
+{
+	if (DistractionSound) {
+		FVector const Location = GetActorLocation();
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), DistractionSound, Location);
+		UAISense_Hearing::ReportNoiseEvent(GetWorld(), Location, 1.0f, this, 0.0f, Tags::NoiseTag);
+	}
 }
 
 

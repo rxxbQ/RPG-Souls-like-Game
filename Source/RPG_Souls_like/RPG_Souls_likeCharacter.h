@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Type/StructType.h"
+#include "Sound/SoundBase.h"
 #include "RPG_Souls_likeCharacter.generated.h"
 
 /* character attribute */
@@ -214,6 +215,11 @@ private:
 	class UAIPerceptionStimuliSourceComponent* Stimulus;
 
 	void SetupStimulus();
+
+	void OnDistract();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		USoundBase* DistractionSound;
 
 };
 

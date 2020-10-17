@@ -16,6 +16,10 @@
 #include "Engine/World.h"
 #include "kismet/GameplayStatics.h"
 #include "RPG_Souls_like/RPG_Souls_likeCharacter.h"
+#include "RPG_Souls_like/AI/AITags.h"
+#include "Perception/AISenseConfig_Hearing.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h"
 
 ABaseAIController::ABaseAIController(FObjectInitializer const& ObjectInitializer)
 {
@@ -30,6 +34,7 @@ ABaseAIController::ABaseAIController(FObjectInitializer const& ObjectInitializer
 	BlackboardComponent = ObjectInitializer.CreateDefaultSubobject<UBlackboardComponent>(this, TEXT("BlackboardComp"));
 
 	SetupPerceptionSystem();
+
 }
 
 void ABaseAIController::BeginPlay()
@@ -91,23 +96,61 @@ void ABaseAIController::OnTargetDetected(AActor* Actor, FAIStimulus const Stimul
 	}
 }
 
+void ABaseAIController::OnUpdated(TArray<AActor*> const& UpdatedActors)
+{
+	for (size_t x = 0; x < UpdatedActors.Num(); ++x) {
+		FActorPerceptionBlueprintInfo Info;
+		GetPerceptionComponent()->GetActorsPerception(UpdatedActors[x], Info);
+
+		for (size_t k = 0; k < Info.LastSensedStimuli.Num(); ++k) {
+			FAIStimulus const Stim = Info.LastSensedStimuli[k];
+
+			if (Stim.Tag == Tags::NoiseTag) {
+				GetBlackboard()->SetValueAsBool(BbKeys::IsInvestigating, Stim.WasSuccessfullySensed());
+				GetBlackboard()->SetValueAsVector(BbKeys::TargetLocation, Stim.StimulusLocation);
+			}
+			else {
+				GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, Stim.WasSuccessfullySensed());
+			}
+		}
+	}
+
+}
+
 void ABaseAIController::SetupPerceptionSystem()
 {
 	//create and initialize sight configuration object
 	SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("Sight Config"));
-	SetPerceptionComponent(*CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception Component")));
 
-	SightConfig->SightRadius = 500.0f;
-	SightConfig->LoseSightRadius = SightConfig->SightRadius + 50.0f;
-	SightConfig->PeripheralVisionAngleDegrees = 90.0f;
-	SightConfig->SetMaxAge(5.0f);
-	SightConfig->AutoSuccessRangeFromLastSeenLocation = 900.0f;
-	SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-	SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
-	SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
+	if (SightConfig) {
+		SetPerceptionComponent(*CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception Component")));
 
-	//add sight configuration component to perception component
-	GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
-	GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnTargetDetected);
-	GetPerceptionComponent()->ConfigureSense(*SightConfig);
+		SightConfig->SightRadius = 500.0f;
+		SightConfig->LoseSightRadius = SightConfig->SightRadius + 25.0f;
+		SightConfig->PeripheralVisionAngleDegrees = 90.0f;
+		SightConfig->SetMaxAge(5.0f);
+		SightConfig->AutoSuccessRangeFromLastSeenLocation = 520.0f;
+		SightConfig->DetectionByAffiliation.bDetectEnemies = true;
+		SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
+		SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
+
+		//add sight configuration component to perception component
+		GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
+		GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnTargetDetected);
+		GetPerceptionComponent()->ConfigureSense(*SightConfig);
+	}
+
+	//create and initialize hearing config object
+	HearingConfig = CreateDefaultSubobject<UAISenseConfig_Hearing>(TEXT("Hearing Config"));
+
+	if (HearingConfig) {
+		HearingConfig->HearingRange = 3000.0f;
+		HearingConfig->DetectionByAffiliation.bDetectEnemies = true;
+		HearingConfig->DetectionByAffiliation.bDetectFriendlies = true;
+		HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
+
+		//add hearing configuration component to perception component
+		GetPerceptionComponent()->OnPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnUpdated);
+		GetPerceptionComponent()->ConfigureSense(*HearingConfig);
+	}
 }

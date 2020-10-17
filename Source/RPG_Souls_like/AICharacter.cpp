@@ -9,6 +9,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Runtime/Engine/Classes/Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 //#include "RPG_Souls_like/AI/BlackBoard/BaseBlackboardData.h"
 
@@ -22,6 +23,10 @@ AAICharacter::AAICharacter()
 
 	GetMesh()->SetSkeletalMesh(SkeletalMesh);
 
+	bUseControllerRotationYaw = false;
+	//GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+
 	//SensingComponent = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("SensingComponent"));
 	//SensingComponent->OnSeePawn.AddDynamic(this, &AAICharacter::SeePawn);
 }
@@ -29,6 +34,33 @@ AAICharacter::AAICharacter()
 void AAICharacter::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+APatrolPath* AAICharacter::GetPatrolPath()
+{
+	return PatrolPath;
+}
+
+/*
+int AAICharacter::MeleeAttack_Implementation()
+{
+	if (Montage) {
+		PlayAnimMontage(Montage);
+	}
+	return 0;
+}
+*/
+
+void AAICharacter::MeleeAttack()
+{
+	if (Montage) {
+		PlayAnimMontage(Montage);
+	}
+}
+
+UAnimMontage* AAICharacter::GetMontage() const
+{
+	return Montage;
 }
 
 /*
