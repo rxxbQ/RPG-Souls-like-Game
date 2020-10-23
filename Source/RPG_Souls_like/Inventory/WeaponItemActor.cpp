@@ -14,11 +14,17 @@ AWeaponItemActor::AWeaponItemActor()
 
 	DefaultWeaponName = FName("");
 
-	WeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCOllisionBox"));
+	WeaponCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollisionBox"));
 	WeaponCollisionBox->SetupAttachment(RootComponent);
 	WeaponCollisionBox->SetHiddenInGame(false);
 	WeaponCollisionBox->SetCollisionProfileName("NoCollision");
 	WeaponCollisionBox->SetNotifyRigidBodyCollision(false);
+
+	ShieldCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ShieldCollisionBox"));
+	ShieldCollisionBox->SetupAttachment(RootComponent);
+	ShieldCollisionBox->SetHiddenInGame(false);
+	ShieldCollisionBox->SetCollisionProfileName("NoCollision");
+	ShieldCollisionBox->SetNotifyRigidBodyCollision(false);
 
 	//load item info
 	//if (DefaultWeaponName != "") {
@@ -53,6 +59,17 @@ void AWeaponItemActor::SetupWeapon(FName WeaponName)
 		if (WeaponData) {
 			MeshComponent->SetSkeletalMesh(WeaponData->WeaponMesh);
 			ItemInformation.ItemTexture = WeaponData->WeaponTexture;
+
+			/*
+			switch (WeaponData->WeaponType.GetValue()) {
+				case E_Attack:
+
+					break;
+				case E_Defence:
+
+					break;
+			}
+			*/
 		}
 	}	
 }

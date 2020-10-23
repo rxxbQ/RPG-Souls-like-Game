@@ -27,6 +27,8 @@ void UIsPlayerInMeleeRange::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, 
 	//get the player character
 	ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
+	float const Distance = Ch->GetDistanceTo(Player);
+
 	//write true or false depending on whether the player is within MeleeRange
-	Controller->GetBlackboard()->SetValueAsBool(BbKeys::PlayerIsInMeleeRange, Ch->GetDistanceTo(Player) <= MeleeRange);
+	Controller->GetBlackboard()->SetValueAsBool(GetSelectedBlackboardKey(), Distance <= MeleeRange);
 }

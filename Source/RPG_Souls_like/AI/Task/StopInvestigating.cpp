@@ -15,7 +15,7 @@ EBTNodeResult::Type UStopInvestigating::ExecuteTask(UBehaviorTreeComponent& Owne
 {
 	//get the AI controller and write false to the blackboard key "IsInvestigating"
 	auto const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
-	Controller->GetBlackboard()->SetValueAsBool(BbKeys::IsInvestigating, false);
+	Controller->GetBlackboard()->SetValueAsBool(GetSelectedBlackboardKey(), false);
 
 	//finish with success
 	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

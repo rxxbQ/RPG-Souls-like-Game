@@ -24,7 +24,7 @@ EBTNodeResult::Type UIncrementPatrolPathIndex::ExecuteTask(UBehaviorTreeComponen
 	int const MaxIndex = NumOfPoints - 1;
 
 	//get and set the blackboard index key
-	int Index = Controller->GetBlackboard()->GetValueAsInt(BbKeys::PatrolPathIndex);
+	int Index = Controller->GetBlackboard()->GetValueAsInt(GetSelectedBlackboardKey());
 	if (Bidirectional) {
 		if (Index >= MaxIndex && Direction == EDirectionType::Forward) {
 			Direction = EDirectionType::Reverse;
@@ -34,7 +34,7 @@ EBTNodeResult::Type UIncrementPatrolPathIndex::ExecuteTask(UBehaviorTreeComponen
 		}
 	}
 
-	Controller->GetBlackboard()->SetValueAsInt(BbKeys::PatrolPathIndex, (Direction == EDirectionType::Forward ? std::abs(++Index) : std::abs(--Index)) % NumOfPoints);
+	Controller->GetBlackboard()->SetValueAsInt(GetSelectedBlackboardKey(), (Direction == EDirectionType::Forward ? std::abs(++Index) : std::abs(--Index)) % NumOfPoints);
 
 	//finish with success
 	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

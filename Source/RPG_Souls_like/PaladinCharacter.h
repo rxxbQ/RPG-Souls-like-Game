@@ -17,9 +17,21 @@ class RPG_SOULS_LIKE_API APaladinCharacter : public ARPG_Souls_likeCharacter
 	/* attack montage*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
 	class UAnimMontage* AttackMontage;
+
+	/* cast spell montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* CastSpellMontage;
+
+	/* block montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* BlockMontage;
 	
 public:
 	APaladinCharacter();
+
+	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaTime) override;
 
 	/**
 	* AttackStart - trigger when the player initiates an attack
@@ -36,8 +48,47 @@ public:
 	*/
 	virtual void AttackInput();
 
+	/**
+	* CastSpellStart - trigger when the player initiates an CastSpell
+	*/
+	virtual void CastSpellStart();
+
+	/**
+	* CastSpellEnd - trigger when the player stops an CastSpell
+	*/
+	virtual void CastSpellEnd();
+
+	/**
+	* CastSpellInput - trigger CastSpell animations based on user input
+	*/
+	virtual void CastSpellInput();
+
+	/**
+	* BlockStart - trigger when the player initiates an Block
+	*/
+	virtual void BlockStart();
+
+	/**
+	* BlockEnd - trigger when the player stops an Block
+	*/
+	virtual void BlockEnd();
+
+	/**
+	* BlockInput - trigger Block animations based on user input
+	*/
+	virtual void BlockInput();
+	
+
 private:
 	//Mesh
 	class USkeletalMesh* PaladinSkeletalMesh;
 
+	UPROPERTY(EditAnywhere, Category = "UI HUD")
+		TSubclassOf<UUserWidget> PlayerStatusWidgetClass;
+
+	UUserWidget* PlayerStatusWidget;
+
+	// cast spell particle system
+	UParticleSystem* SpellParticle;
+	UParticleSystemComponent* ParticleComponent;
 };

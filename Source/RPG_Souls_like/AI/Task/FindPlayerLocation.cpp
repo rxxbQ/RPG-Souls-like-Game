@@ -31,11 +31,11 @@ EBTNodeResult::Type UFindPlayerLocation::ExecuteTask(UBehaviorTreeComponent& Own
 		//get the nagivation system and generate a random location near the player
 		UNavigationSystemV1* const NavSystem = UNavigationSystemV1::GetCurrent(GetWorld());
 		if (NavSystem->GetRandomPointInNavigableRadius(PlayerLocation, SearchRadius, Location, nullptr)) {
-			Controller->GetBlackboard()->SetValueAsVector(BbKeys::TargetLocation, Location.Location);
+			Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), Location.Location);
 		}
 	}
 	else {
-		Controller->GetBlackboard()->SetValueAsVector(BbKeys::TargetLocation, PlayerLocation);
+		Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), PlayerLocation);
 	}
 
 	//finish with success

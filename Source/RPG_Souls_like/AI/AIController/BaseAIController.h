@@ -46,8 +46,8 @@ private:
 
     class UAISenseConfig_Hearing* HearingConfig;
 
-    UFUNCTION()
-        void OnTargetDetected(AActor* actor, FAIStimulus const stimulus);
+    //UFUNCTION()
+    //   void OnTargetDetected(AActor* actor, FAIStimulus const stimulus);
 
     UFUNCTION()
         void OnUpdated(TArray<AActor*> const& UpdatedActors);

@@ -254,7 +254,7 @@ FText UCharacterAttributeUserWidget::GetMana()
 //stamina text
 FText UCharacterAttributeUserWidget::GetStamina()
 {
-	return BaseCharacter->GetCharacterBasic(BaseCharacter->GetCharacterProperty().CharacterMaxStamina, BaseCharacter->GetCharacterProperty().CharacterCurrentStamina, TEXT("Stamina : "));
+	return BaseCharacter->GetCharacterBasic(uint32(BaseCharacter->GetCharacterProperty().CharacterMaxStamina), uint32(BaseCharacter->GetCharacterProperty().CharacterCurrentStamina), TEXT("Stamina : "));
 }
 
 //level text

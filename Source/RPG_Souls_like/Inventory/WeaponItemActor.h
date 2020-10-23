@@ -8,6 +8,13 @@
 #include "Components/BoxComponent.h"
 #include "WeaponItemActor.generated.h"
 
+//weapon type
+UENUM (BlueprintType)
+enum EWeaponType {
+	E_Attack,
+	E_Defence
+};
+
 USTRUCT (BlueprintType)
 struct FWeaponData : public FTableRowBase 
 {
@@ -22,6 +29,8 @@ struct FWeaponData : public FTableRowBase
 	UPROPERTY(EditAnywhere)
 		class UTexture2D* WeaponTexture;
 
+	UPROPERTY(EditAnywhere)
+		TEnumAsByte<EWeaponType> WeaponType;
 };
 
 /**
@@ -47,6 +56,10 @@ public:
 	//collision box
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 		class UBoxComponent* WeaponCollisionBox;
+
+	//collision box
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
+		class UBoxComponent* ShieldCollisionBox;
 
 protected:
 

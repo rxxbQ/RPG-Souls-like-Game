@@ -7,6 +7,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "CharacterPlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Inventory/WeaponItemActor.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
@@ -15,6 +16,9 @@
 #include "AI/AITags.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
+#include "AICharacter.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ARPG_Souls_likeCharacter
@@ -62,6 +66,9 @@ ARPG_Souls_likeCharacter::ARPG_Souls_likeCharacter()
 
 	SetupStimulus();
 
+	RegenerateStamina = false;
+
+	Pc = Cast<ACharacterPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
 }
 
 void ARPG_Souls_likeCharacter::BeginPlay()
@@ -70,10 +77,20 @@ void ARPG_Souls_likeCharacter::BeginPlay()
 
 	ARPG_Souls_likeCharacter::SpawnWeapon();
 
-	Weapon->WeaponCollisionBox->OnComponentHit.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackHit);
+	//attach delegates to the collision box
 
-	//Weapon->WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackOverlapBegin);
-	//Weapon->WeaponCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackOverlapEnd);
+	//Weapon->WeaponCollisionBox->OnComponentHit.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackHit);
+
+	if (Weapon->WeaponCollisionBox) {
+		Weapon->WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackOverlapBegin);
+		Weapon->WeaponCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnAttackOverlapEnd);
+	}
+
+	if (Shield->ShieldCollisionBox) {
+		Shield->ShieldCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnBlockOverlapBegin);
+		Shield->ShieldCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnBlockOverlapEnd);
+	}
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -111,6 +128,12 @@ void ARPG_Souls_likeCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	//PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &ARPG_Souls_likeCharacter::SpawnWeapon);
 
 	PlayerInputComponent->BindAction("Distract", IE_Pressed, this, &ARPG_Souls_likeCharacter::OnDistract);
+
+	PlayerInputComponent->BindAction("CastSpell", IE_Pressed, this, &ARPG_Souls_likeCharacter::CastSpellInput);
+	PlayerInputComponent->BindAction("CastSpell", IE_Released, this, &ARPG_Souls_likeCharacter::CastSpellEnd);
+
+	PlayerInputComponent->BindAction("Block", IE_Pressed, this, &ARPG_Souls_likeCharacter::BlockInput);
+	PlayerInputComponent->BindAction("Block", IE_Released, this, &ARPG_Souls_likeCharacter::BlockEnd);
 
 	
 }
@@ -173,8 +196,10 @@ void ARPG_Souls_likeCharacter::MoveRight(float Value)
 
 void ARPG_Souls_likeCharacter::AttackStart()
 {
+	RegenerateStamina = false;
 	Weapon->WeaponCollisionBox->SetCollisionProfileName("Weapon");
 	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(true);
+
 	//Weapon->WeaponCollisionBox->SetGenerateOverlapEvents(true);
 
 	//UE_LOG(LogTemp, Warning, TEXT("%s"), *Weapon->WeaponCollisionBox->GetCollisionProfileName().ToString());
@@ -182,6 +207,7 @@ void ARPG_Souls_likeCharacter::AttackStart()
 
 void ARPG_Souls_likeCharacter::AttackEnd()
 {
+	RegenerateStamina = true;
 	Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
 	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(false);
 	//Weapon->WeaponCollisionBox->SetGenerateOverlapEvents(false);
@@ -203,20 +229,77 @@ void ARPG_Souls_likeCharacter::OnAttackHit(UPrimitiveComponent* HitComponent,
 void ARPG_Souls_likeCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("overlap begin: %s"), *OtherActor->GetName());
+	//UE_LOG(LogTemp, Warning, TEXT("overlap begin: %s"), *OtherActor->GetName());
+	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+		float const NewHealth = AI->GetHealth() - AI->GetMaxHealth()*0.1f;
+		AI->SetHealth(NewHealth);
+	}
 }
 
-void ARPG_Souls_likeCharacter::OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void ARPG_Souls_likeCharacter::OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	UE_LOG(LogTemp, Warning, TEXT("overlap end: %s"), *OtherActor->GetName());
+	//UE_LOG(LogTemp, Warning, TEXT("overlap end: %s"), *OtherActor->GetName());
 }
 
+void ARPG_Souls_likeCharacter::OnBlockOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
+	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+		AttackBlocked = true;
+	}
+}
+
+void ARPG_Souls_likeCharacter::OnBlockOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+		AttackBlocked = false;
+	}
+}
+
+void ARPG_Souls_likeCharacter::CastSpellStart()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("disable input"));
+	DisableInput(Pc);
+	
+}
+
+void ARPG_Souls_likeCharacter::CastSpellEnd()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("enable input"));
+	EnableInput(Pc);
+}
+
+void ARPG_Souls_likeCharacter::CastSpellInput()
+{
+
+}
+
+void ARPG_Souls_likeCharacter::BlockStart()
+{
+	RegenerateStamina = false;
+	Shield->ShieldCollisionBox->SetCollisionProfileName("Shield");
+	Shield->ShieldCollisionBox->SetNotifyRigidBodyCollision(true);
+}
+
+void ARPG_Souls_likeCharacter::BlockEnd()
+{
+	RegenerateStamina = true;
+	Shield->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
+	Shield->ShieldCollisionBox->SetNotifyRigidBodyCollision(false);
+}
+
+void ARPG_Souls_likeCharacter::BlockInput()
+{
+
+}
 
 FText ARPG_Souls_likeCharacter::GetCharacterClass()
 {
 	switch (GetCharacterProperty().CharacterClass.GetValue()) {
 	case Assasin:
-		return FText::FromString(TEXT("Class : CAssasin"));
+		return FText::FromString(TEXT("Class : Assasin"));
 		break;
 
 	case Mage:
@@ -258,6 +341,47 @@ FText ARPG_Souls_likeCharacter::GetCharacterAttribute(int32 SelfAttribute, FStri
 	return FText::FromString(NewString);
 }
 
+void ARPG_Souls_likeCharacter::SetHealth(int32 const NewHealth)
+{
+	if (NewHealth <= 0) {
+		UE_LOG(LogTemp, Error, TEXT("You die"));
+
+		//auto const Control = UGameplayStatics::GetPlayerController(this, 0);
+		//Control->SetCinematicMode(true, false, false, true, true);
+		GetMesh()->SetSimulatePhysics(true);
+		GetMovementComponent()->MovementState.bCanJump = false;
+		GetWorld()->GetFirstPlayerController()->ConsoleCommand("quit");
+	}
+	else if (uint32(NewHealth) >= CharacterAttribute.CharacterMaxHp){
+		CharacterAttribute.CharacterCurrentHp = CharacterAttribute.CharacterMaxHp;
+	}
+	else {
+		CharacterAttribute.CharacterCurrentHp = NewHealth;
+	}
+	
+}
+
+void ARPG_Souls_likeCharacter::SetMana(int32 const NewMana)
+{
+	if (NewMana <= 0) {
+		CharacterAttribute.CharacterCurrentMp = 0;
+	}
+	else {
+		CharacterAttribute.CharacterCurrentMp = NewMana;
+	}
+	
+}
+
+void ARPG_Souls_likeCharacter::SetStamina(float const NewStamina)
+{
+	if (NewStamina <= 0) {
+		CharacterAttribute.CharacterCurrentStamina = 0;
+	}
+	else {
+		CharacterAttribute.CharacterCurrentStamina = NewStamina;
+	}
+}
+
 void ARPG_Souls_likeCharacter::SpawnWeapon()
 {
 	
@@ -271,7 +395,12 @@ void ARPG_Souls_likeCharacter::SpawnWeapon()
 			WeaponTransform.SetLocation(FVector::ZeroVector);
 			WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
 
+			FTransform ShieldTransform;
+			ShieldTransform.SetLocation(FVector::ZeroVector);
+			ShieldTransform.SetRotation(FQuat(FRotator::ZeroRotator));
+
 			Weapon = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
+			Shield = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, ShieldTransform, SpawnParams);
 			
 			if (Weapon) {
 				//UE_LOG(LogTemp, Warning, TEXT("%d"), Weapon->WeaponNum);
@@ -286,8 +415,21 @@ void ARPG_Souls_likeCharacter::SpawnWeapon()
 					Weapon->SetupWeapon(FName("BlackKnight"));
 					Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_r"));
 					Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
+					Weapon->ShieldCollisionBox->SetHiddenInGame(true);
+					Weapon->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
 					Weapon->Pickable = false;
 				//}
+			}
+
+			if (Shield) {
+				Shield->SetupWeapon(FName("Shield"));
+				Shield->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_l"));
+				Shield->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
+				Shield->MeshComponent->SetRelativeRotation(FQuat(FRotator(0, 0, 0)));
+				Shield->WeaponCollisionBox->SetHiddenInGame(true);
+				Shield->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
+				Shield->Pickable = false;
+				
 			}
 		}
 		

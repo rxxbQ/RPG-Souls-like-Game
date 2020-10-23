@@ -89,12 +89,14 @@ void ABaseAIController::OnUnPossess()
 	BehaviorTreeComponent->StopTree();
 }
 
+/*
 void ABaseAIController::OnTargetDetected(AActor* Actor, FAIStimulus const Stimulus)
 {
 	if (auto const Ch = Cast<ARPG_Souls_likeCharacter>(Actor)) {
 		GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, Stimulus.WasSuccessfullySensed());
 	}
 }
+*/
 
 void ABaseAIController::OnUpdated(TArray<AActor*> const& UpdatedActors)
 {
@@ -109,7 +111,7 @@ void ABaseAIController::OnUpdated(TArray<AActor*> const& UpdatedActors)
 				GetBlackboard()->SetValueAsBool(BbKeys::IsInvestigating, Stim.WasSuccessfullySensed());
 				GetBlackboard()->SetValueAsVector(BbKeys::TargetLocation, Stim.StimulusLocation);
 			}
-			else {
+			else if(Stim.Type.Name == "Default__AISense_Sight"){
 				GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, Stim.WasSuccessfullySensed());
 			}
 		}
@@ -136,7 +138,7 @@ void ABaseAIController::SetupPerceptionSystem()
 
 		//add sight configuration component to perception component
 		GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
-		GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnTargetDetected);
+		//GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnTargetDetected);
 		GetPerceptionComponent()->ConfigureSense(*SightConfig);
 	}
 

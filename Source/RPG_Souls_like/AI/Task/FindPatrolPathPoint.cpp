@@ -18,7 +18,7 @@ EBTNodeResult::Type UFindPatrolPathPoint::ExecuteTask(UBehaviorTreeComponent& Ow
 	ABaseAIController* const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
 
 	//get the current patrol path index from the blackboard
-	int const Index = Controller->GetBlackboard()->GetValueAsInt(BbKeys::PatrolPathIndex);
+	int const Index = Controller->GetBlackboard()->GetValueAsInt(GetSelectedBlackboardKey());
 
 	//use the index to get the current patrol path from the AI's reference to the patrol path
 	AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
@@ -28,7 +28,7 @@ EBTNodeResult::Type UFindPatrolPathPoint::ExecuteTask(UBehaviorTreeComponent& Ow
 	FVector const GlobalPoint = Ch->GetPatrolPath()->GetActorTransform().TransformPosition(Point);
 
 	// write the current global path point to the blackboard
-	Controller->GetBlackboard()->SetValueAsVector(BbKeys::PatrolPathVector, GlobalPoint);
+	Controller->GetBlackboard()->SetValueAsVector(PatrolPathVectorKey.SelectedKeyName, GlobalPoint);
 
 	//finish with success
 	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

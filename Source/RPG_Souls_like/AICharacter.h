@@ -8,6 +8,7 @@
 #include "AI/Task/PatrolPath.h"
 //#include "AI/CombatInterface.h"
 #include "Animation/AnimMontage.h"
+#include "BehaviorTree/BehaviorTree.h"
 #include "AICharacter.generated.h"
 
 /**
@@ -22,6 +23,8 @@ public:
     AAICharacter();
 
     virtual void BeginPlay() override;
+
+    void Tick(float const DeltaTime) override;
 
     class USkeletalMesh* SkeletalMesh;
 
@@ -39,14 +42,52 @@ public:
 
     UAnimMontage* GetMontage() const;
 
+    float GetHealth() const;
+
+    float GetMaxHealth() const;
+
+    void SetHealth(float const NewHealth);
+
+    //UBehaviorTree* GetBehaviorTree() const;
+
+    virtual void AttackStart();
+
+    virtual void AttackEnd();
+
+    /**
+    * OnAttackOverlapBegin - triggerred when the collider overlaps another component
+    */
+    UFUNCTION()
+        void OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+            int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+    /**
+    * OnAttackOverlapEnd - triggerred when the collider stops overlapping another component
+    */
+    UFUNCTION()
+        void OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
         APatrolPath* PatrolPath;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
         UAnimMontage* Montage;
+
+    class UWidgetComponent* WidgetComp;
+
+    float const MaxHealth = 100.0f;
+
+    float Health;
+
     /*
     UFUNCTION()
         void SeePawn(APawn* Pawn);
     */
+
+protected:
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision", meta = (AllowPrivateAccess = "true"))
+        class UBoxComponent* RightFistCollisionBox;
+
 };

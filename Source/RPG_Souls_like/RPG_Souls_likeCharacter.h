@@ -48,10 +48,10 @@ struct FCharacterAttribute {
 	uint32 CharacterCurrentMp;
 
 	//max stamina
-	uint32 CharacterMaxStamina;
+	float CharacterMaxStamina;
 
 	//current stamina
-	uint32 CharacterCurrentStamina;
+	float CharacterCurrentStamina;
 
 	//max exp
 	uint32 CharacterMaxExp;
@@ -152,6 +152,10 @@ protected:
 
 	class AWeaponItemActor* Weapon;
 
+	class AWeaponItemActor* Shield;
+
+	bool RegenerateStamina;
+
 public:
 	/* get attribute text block*/
 	//get character class
@@ -168,9 +172,14 @@ public:
 	
 	FORCEINLINE FCharacterAttribute GetCharacterProperty() { return CharacterAttribute; }
 
+	void SetHealth(int32 const NewHealth);
+
+	void SetMana(int32 const NewMana);
+
+	void SetStamina(float const NewStamina);
+
 	//spawn weapon
 	void SpawnWeapon();
-
 
 	virtual void BeginPlay() override;
 
@@ -192,6 +201,36 @@ public:
 	virtual void AttackInput();
 
 	/**
+	* CastSpellStart - trigger when the player initiates an CastSpell
+	*/
+	virtual void CastSpellStart();
+
+	/**
+	* CastSpellEnd - trigger when the player stops an CastSpell
+	*/
+	virtual void CastSpellEnd();
+
+	/**
+	* CastSpellInput - trigger CastSpell animations based on user input
+	*/
+	virtual void CastSpellInput();
+
+	/**
+	* BlockStart - trigger when the player initiates an Block
+	*/
+	virtual void BlockStart();
+
+	/**
+	* BlockEnd - trigger when the player stops an Block
+	*/
+	virtual void BlockEnd();
+
+	/**
+	* BlockInput - trigger Block animations based on user input
+	*/
+	virtual void BlockInput();
+
+	/**
 	* OnAttackHit - triggerred when the collision hit event fires between the weapon and enmy eneities
 	*/
 	UFUNCTION()
@@ -210,6 +249,21 @@ public:
 	*/
 	UFUNCTION()
 		void OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	/**
+	* OnBlockOverlapBegin - triggerred when the collider overlaps another component
+	*/
+	UFUNCTION()
+		void OnBlockOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/**
+	* OnBlockOverlapEnd - triggerred when the collider stops overlapping another component
+	*/
+	UFUNCTION()
+		void OnBlockOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	bool AttackBlocked;
 
 private:
 	class UAIPerceptionStimuliSourceComponent* Stimulus;
