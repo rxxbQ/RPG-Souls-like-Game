@@ -89,9 +89,9 @@ APaladinCharacter::APaladinCharacter()
 
 	CharacterAttribute.CharacterMovementSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
-	CharacterAttribute.CharacterAttackDamage = 0;
+	//CharacterAttribute.CharacterAttackDamage = Buff + Damage;
 
-	CharacterAttribute.CharacterMagicDamage = 0;
+	//CharacterAttribute.CharacterMagicDamage = 0;
 
 }
 
@@ -119,8 +119,13 @@ void APaladinCharacter::Tick(float DeltaTime)
 		StatusWidget->SetStaminaValuePercent(float(CharacterAttribute.CharacterCurrentStamina) / float(CharacterAttribute.CharacterMaxStamina));
 	}
 
-	if (CharacterAttribute.CharacterCurrentStamina < CharacterAttribute.CharacterMaxStamina && RegenerateStamina == true) {
+	if (CharacterAttribute.CharacterCurrentStamina < CharacterAttribute.CharacterMaxStamina && RegenerateStamina == true && CharacterAttribute.CharacterCurrentStamina > 0) {
 		CharacterAttribute.CharacterCurrentStamina += 0.1f;
+	}
+	else if (CharacterAttribute.CharacterCurrentStamina <= 0) {
+		if (!GetWorld()->GetTimerManager().IsTimerActive(StaminaTimerHandle)) {
+			GetWorld()->GetTimerManager().SetTimer(StaminaTimerHandle, this, &APaladinCharacter::TriggerRegenerateStamina, 2.f, true);
+		}	
 	}
 	
 	//CharacterAttribute.CharacterCurrentHp -= DeltaTime * 0.3f;
@@ -206,9 +211,20 @@ void APaladinCharacter::BlockEnd()
 
 void APaladinCharacter::BlockInput()
 {
-	//fstring animation section
-	FString MontageSection = "start_1";
+	if (CharacterAttribute.CharacterCurrentStamina > 0) {
 
-	PlayAnimMontage(BlockMontage, 1.0f, FName(*MontageSection));
+		int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
+		SetStamina(NewStamina);
+
+		//fstring animation section
+		FString MontageSection = "start_1";
+
+		PlayAnimMontage(BlockMontage, 1.0f, FName(*MontageSection));
+	}
+}
+
+void APaladinCharacter::TriggerRegenerateStamina()
+{
+	CharacterAttribute.CharacterCurrentStamina += 0.3f;
 }
 

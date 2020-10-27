@@ -25,7 +25,7 @@ ABaseAIController::ABaseAIController(FObjectInitializer const& ObjectInitializer
 {
 	static ConstructorHelpers::FObjectFinder<UBehaviorTree> Obj(TEXT("BehaviorTree'/Game/AI/Behavior/BaseBT.BaseBT'"));
 
-	if (Obj.Succeeded()) 
+	if (Obj.Succeeded())
 	{
 		BehaviorTree = Obj.Object;
 	}
@@ -60,7 +60,6 @@ void ABaseAIController::OnPossess(APawn* const InPawn)
 	/*
 	AAICharacter* AICharacter = Cast<AAICharacter>(InPawn);
 	if (AICharacter) {
-
 		Blackboard = NewObject<UBaseBlackboardData>();
 		if (Blackboard) {
 			UseBlackboard(Blackboard, BlackboardComponent);
@@ -68,7 +67,6 @@ void ABaseAIController::OnPossess(APawn* const InPawn)
 		else {
 			UE_LOG(LogTemp, Warning, TEXT("Blackboard cast failed"));
 		}
-
 		BehaviorTree = NewObject<UBaseBehaviorTree>();
 		if (BehaviorTree) {
 			BehaviorTreeComponent->StartTree(*BehaviorTree);
@@ -76,7 +74,7 @@ void ABaseAIController::OnPossess(APawn* const InPawn)
 		else {
 			UE_LOG(LogTemp, Warning, TEXT("BehaviorTree cast failed"));
 		}
-		
+
 	}
 	else {
 		UE_LOG(LogTemp, Warning, TEXT("InPawn cast failed"));
@@ -111,7 +109,7 @@ void ABaseAIController::OnUpdated(TArray<AActor*> const& UpdatedActors)
 				GetBlackboard()->SetValueAsBool(BbKeys::IsInvestigating, Stim.WasSuccessfullySensed());
 				GetBlackboard()->SetValueAsVector(BbKeys::TargetLocation, Stim.StimulusLocation);
 			}
-			else if(Stim.Type.Name == "Default__AISense_Sight"){
+			else if (Stim.Type.Name == "Default__AISense_Sight") {
 				GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, Stim.WasSuccessfullySensed());
 			}
 		}

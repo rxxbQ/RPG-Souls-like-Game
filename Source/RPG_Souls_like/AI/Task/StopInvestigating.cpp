@@ -6,7 +6,7 @@
 #include "RPG_Souls_like/AI/BlackBoard/BlackboardKeys.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
-UStopInvestigating::UStopInvestigating(FObjectInitializer const& ObjectInitializer) 
+UStopInvestigating::UStopInvestigating(FObjectInitializer const& ObjectInitializer)
 {
 	NodeName = TEXT("Stop Investigating");
 }
@@ -15,9 +15,13 @@ EBTNodeResult::Type UStopInvestigating::ExecuteTask(UBehaviorTreeComponent& Owne
 {
 	//get the AI controller and write false to the blackboard key "IsInvestigating"
 	auto const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
-	Controller->GetBlackboard()->SetValueAsBool(GetSelectedBlackboardKey(), false);
 
-	//finish with success
-	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-	return EBTNodeResult::Succeeded;
+	if (Controller) {
+		Controller->GetBlackboard()->SetValueAsBool(GetSelectedBlackboardKey(), false);
+
+		//finish with success
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		return EBTNodeResult::Succeeded;
+	}
+	return EBTNodeResult::Failed;
 }

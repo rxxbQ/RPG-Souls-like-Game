@@ -17,6 +17,7 @@
 #include "Components/BoxComponent.h"
 #include "RPG_Souls_likeCharacter.h"
 #include "RPG_Souls_like/Inventory/WeaponItemActor.h"
+#include "Kismet/GameplayStatics.h"
 
 //#include "RPG_Souls_like/AI/BlackBoard/BaseBlackboardData.h"
 
@@ -38,6 +39,9 @@ AAICharacter::AAICharacter()
 	//SensingComponent->OnSeePawn.AddDynamic(this, &AAICharacter::SeePawn);
 
 	Health = MaxHealth;
+
+	Exp = 250;
+
 	WidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
 
 	if (WidgetComp) {
@@ -130,14 +134,21 @@ float AAICharacter::GetMaxHealth() const
 	return MaxHealth;
 }
 
+int AAICharacter::GetExp() const
+{
+	return Exp;
+}
+
 void AAICharacter::SetHealth(float const NewHealth)
 {
 	Health = NewHealth;
 
 	if (Health <= 0) {
 		UE_LOG(LogTemp, Warning, TEXT("Enemy dies"));
-		GetMesh()->SetSimulatePhysics(true);
-		//Destroy();
+		//GetMesh()->SetSimulatePhysics(true);
+		ARPG_Souls_likeCharacter* const Ch = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+		Ch->SetExp(Ch->GetCharacterProperty().CharacterCurrentExp + Exp);
+		Destroy();
 	}
 }
 
@@ -151,6 +162,11 @@ void AAICharacter::AttackEnd()
 {
 	RightFistCollisionBox->SetCollisionProfileName("NoCollision");
 	RightFistCollisionBox->SetNotifyRigidBodyCollision(false);
+}
+
+void AAICharacter::SetPatrolPath(APatrolPath* const Path)
+{
+	PatrolPath = Path;
 }
 
 void AAICharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

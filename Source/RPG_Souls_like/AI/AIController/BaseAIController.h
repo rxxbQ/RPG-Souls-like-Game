@@ -8,12 +8,12 @@
 #include "BaseAIController.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class RPG_SOULS_LIKE_API ABaseAIController : public AAIController
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
     ABaseAIController(FObjectInitializer const& ObjectInitializer = FObjectInitializer::Get());
@@ -31,7 +31,7 @@ public:
     virtual void OnUnPossess() override;
 
 private:
-    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category= "AI", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
         //behavior tree component
         class UBehaviorTreeComponent* BehaviorTreeComponent;
 

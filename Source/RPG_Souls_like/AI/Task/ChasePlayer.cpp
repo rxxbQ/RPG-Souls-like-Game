@@ -7,7 +7,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 
-UChasePlayer::UChasePlayer(FObjectInitializer const& ObjectInitializer) 
+UChasePlayer::UChasePlayer(FObjectInitializer const& ObjectInitializer)
 {
 	NodeName = TEXT("Chase Player");
 }
@@ -16,12 +16,17 @@ EBTNodeResult::Type UChasePlayer::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 {
 	//get TargetLocation from blackboard via AI controller
 	ABaseAIController* const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
-	FVector const PlayerLocation = Controller->GetBlackboard()->GetValueAsVector(GetSelectedBlackboardKey());
 
-	//move to the player's location
-	UAIBlueprintHelperLibrary::SimpleMoveToLocation(Controller, PlayerLocation);
+	if (Controller) {
+		FVector const PlayerLocation = Controller->GetBlackboard()->GetValueAsVector(GetSelectedBlackboardKey());
 
-	//finish with succcess
-	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-	return EBTNodeResult::Succeeded;
+		//move to the player's location
+		UAIBlueprintHelperLibrary::SimpleMoveToLocation(Controller, PlayerLocation);
+
+		//finish with succcess
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		return EBTNodeResult::Succeeded;
+	}
+	return EBTNodeResult::Failed;
+	
 }

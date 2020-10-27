@@ -20,6 +20,8 @@ public:
 	//number of patrol points
 	int Num() const;
 
+	void AddPatrolPoint(FVector const& NewPoint);
+
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI", meta = (MakeEditWidget = "true", AllowPrivateAccess = "true"))
 		TArray<FVector> PatrolPoints;

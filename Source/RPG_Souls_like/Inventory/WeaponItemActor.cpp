@@ -60,6 +60,9 @@ void AWeaponItemActor::SetupWeapon(FName WeaponName)
 			MeshComponent->SetSkeletalMesh(WeaponData->WeaponMesh);
 			ItemInformation.ItemTexture = WeaponData->WeaponTexture;
 
+			Damage = WeaponData->Damage;
+			StrengthBuff = WeaponData->StrengthBuff;
+			AgilityBuff = WeaponData->AgilityBuff;
 			/*
 			switch (WeaponData->WeaponType.GetValue()) {
 				case E_Attack:

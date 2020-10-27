@@ -20,19 +20,24 @@ EBTNodeResult::Type UFindRandomLocation::ExecuteTask(UBehaviorTreeComponent& Own
 	auto const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
 	auto const Character = Controller->GetPawn();
 
-	// obtain AI character location to use as an origin location
-	FVector const Origin = Character->GetActorLocation();
-	FNavLocation Location;
+	if (Controller) {
+		if (Character) {
+			// obtain AI character location to use as an origin location
+			FVector const Origin = Character->GetActorLocation();
+			FNavLocation Location;
 
-	//get the navigation system and generate a random location on the NavMesh
-	UNavigationSystemV1* const NavSystem = UNavigationSystemV1::GetCurrent(GetWorld());
+			//get the navigation system and generate a random location on the NavMesh
+			if (UNavigationSystemV1* const NavSystem = UNavigationSystemV1::GetCurrent(GetWorld())) {
+				if (NavSystem->GetRandomPointInNavigableRadius(Origin, SearchRadius, Location, nullptr)) {
+					Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), Location.Location);
+				}
 
-	if (NavSystem->GetRandomPointInNavigableRadius(Origin, SearchRadius, Location, nullptr)) {
-		Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), Location.Location);
+				// finish with success
+				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+
+				return EBTNodeResult::Succeeded;
+			}	
+		}
 	}
-
-	// finish with success
-	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-
-	return EBTNodeResult::Succeeded;
+	return EBTNodeResult::Failed;
 }

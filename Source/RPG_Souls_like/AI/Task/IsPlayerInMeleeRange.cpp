@@ -10,7 +10,7 @@
 #include "RPG_Souls_like/RPG_Souls_likeCharacter.h"
 #include "Kismet/GameplayStatics.h"
 
-UIsPlayerInMeleeRange::UIsPlayerInMeleeRange() 
+UIsPlayerInMeleeRange::UIsPlayerInMeleeRange()
 {
 	bNotifyBecomeRelevant = true;
 	NodeName = TEXT("Is Player In Melee Range");
@@ -22,13 +22,20 @@ void UIsPlayerInMeleeRange::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, 
 
 	//get AI controller and AI character
 	ABaseAIController* const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
-	AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
 
-	//get the player character
-	ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	if (Controller) {
+		AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
+		
+		if (Ch) {
+			//get the player character
+			ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
-	float const Distance = Ch->GetDistanceTo(Player);
+			float const Distance = Ch->GetDistanceTo(Player);
 
-	//write true or false depending on whether the player is within MeleeRange
-	Controller->GetBlackboard()->SetValueAsBool(GetSelectedBlackboardKey(), Distance <= MeleeRange);
+			//write true or false depending on whether the player is within MeleeRange
+			Controller->GetBlackboard()->SetValueAsBool(GetSelectedBlackboardKey(), Distance <= MeleeRange);
+		}
+		
+	}
+	
 }

@@ -7,7 +7,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "RPG_Souls_like/AICharacter.h"
 
-UFindPatrolPathPoint::UFindPatrolPathPoint(FObjectInitializer const& ObjectInitializer) 
+UFindPatrolPathPoint::UFindPatrolPathPoint(FObjectInitializer const& ObjectInitializer)
 {
 	NodeName = TEXT("Find Patrol Path Point");
 }
@@ -17,20 +17,27 @@ EBTNodeResult::Type UFindPatrolPathPoint::ExecuteTask(UBehaviorTreeComponent& Ow
 	//get the AI controller for the patrolling AI
 	ABaseAIController* const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
 
-	//get the current patrol path index from the blackboard
-	int const Index = Controller->GetBlackboard()->GetValueAsInt(GetSelectedBlackboardKey());
+	if (Controller) {
+		//get the current patrol path index from the blackboard
+		int const Index = Controller->GetBlackboard()->GetValueAsInt(GetSelectedBlackboardKey());
 
-	//use the index to get the current patrol path from the AI's reference to the patrol path
-	AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
-	FVector const Point = Ch->GetPatrolPath()->GetPatrolPoint(Index);
+		//use the index to get the current patrol path from the AI's reference to the patrol path
+		AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
 
-	//transform this point to a global position using its parent
-	FVector const GlobalPoint = Ch->GetPatrolPath()->GetActorTransform().TransformPosition(Point);
+		if (Ch) {
+			FVector const Point = Ch->GetPatrolPath()->GetPatrolPoint(Index);
 
-	// write the current global path point to the blackboard
-	Controller->GetBlackboard()->SetValueAsVector(PatrolPathVectorKey.SelectedKeyName, GlobalPoint);
+			//transform this point to a global position using its parent
+			FVector const GlobalPoint = Ch->GetPatrolPath()->GetActorTransform().TransformPosition(Point);
 
-	//finish with success
-	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-	return EBTNodeResult::Succeeded;
+			// write the current global path point to the blackboard
+			Controller->GetBlackboard()->SetValueAsVector(PatrolPathVectorKey.SelectedKeyName, GlobalPoint);
+
+			//finish with success
+			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+			return EBTNodeResult::Succeeded;
+		}
+		
+	}
+	return EBTNodeResult::Failed;
 }

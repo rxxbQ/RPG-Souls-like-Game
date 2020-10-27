@@ -178,6 +178,8 @@ public:
 
 	void SetStamina(float const NewStamina);
 
+	void SetExp(int32 const NewExp);
+
 	//spawn weapon
 	void SpawnWeapon();
 
@@ -264,6 +266,11 @@ public:
 		void OnBlockOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	bool AttackBlocked;
+
+	int32 Buff;
+
+	int32 Damage;
+
 
 private:
 	class UAIPerceptionStimuliSourceComponent* Stimulus;

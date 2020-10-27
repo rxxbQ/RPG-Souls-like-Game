@@ -78,6 +78,10 @@ public:
 	*/
 	virtual void BlockInput();
 	
+	FTimerHandle StaminaTimerHandle;
+
+	UFUNCTION()
+		void TriggerRegenerateStamina();
 
 private:
 	//Mesh

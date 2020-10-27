@@ -20,3 +20,8 @@ int APatrolPath::Num() const
 {
 	return PatrolPoints.Num();
 }
+
+void APatrolPath::AddPatrolPoint(FVector const& NewPoint)
+{
+	PatrolPoints.Add(NewPoint);
+}

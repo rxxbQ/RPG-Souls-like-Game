@@ -46,14 +46,15 @@ public:
 
     float GetMaxHealth() const;
 
-    void SetHealth(float const NewHealth);
+    int GetExp() const;
 
-    //UBehaviorTree* GetBehaviorTree() const;
+    void SetHealth(float const NewHealth);
 
     virtual void AttackStart();
 
     virtual void AttackEnd();
 
+    void SetPatrolPath(APatrolPath* const Path);
     /**
     * OnAttackOverlapBegin - triggerred when the collider overlaps another component
     */
@@ -76,9 +77,11 @@ private:
 
     class UWidgetComponent* WidgetComp;
 
-    float const MaxHealth = 100.0f;
+    float const MaxHealth = 582.0f;
 
     float Health;
+
+    int32 Exp;
 
     /*
     UFUNCTION()

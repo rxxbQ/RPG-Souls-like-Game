@@ -17,9 +17,15 @@ void UChangeSpeed::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, uint8* No
 	Super::OnBecomeRelevant(OwnerComp, NodeMemory);
 
 	auto const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
-	AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
+	if (Controller) {
+		AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
 
-	Ch->GetCharacterMovement()->MaxWalkSpeed = Speed;
+		if (Ch) {
+			Ch->GetCharacterMovement()->MaxWalkSpeed = Speed;
+		}
+		
+	}
+	
 }
 
 FString UChangeSpeed::GetStaticServiceDescription() const

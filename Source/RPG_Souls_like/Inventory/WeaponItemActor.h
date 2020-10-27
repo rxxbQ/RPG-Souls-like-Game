@@ -31,6 +31,15 @@ struct FWeaponData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere)
 		TEnumAsByte<EWeaponType> WeaponType;
+
+	UPROPERTY(EditAnywhere)
+		float Damage;
+
+	UPROPERTY(EditAnywhere)
+		float StrengthBuff;
+
+	UPROPERTY(EditAnywhere)
+		float AgilityBuff;
 };
 
 /**
@@ -60,6 +69,12 @@ public:
 	//collision box
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 		class UBoxComponent* ShieldCollisionBox;
+
+	float Damage;
+
+	float StrengthBuff;
+
+	float AgilityBuff;
 
 protected:
 

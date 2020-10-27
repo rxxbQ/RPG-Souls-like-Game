@@ -91,6 +91,10 @@ void ARPG_Souls_likeCharacter::BeginPlay()
 		Shield->ShieldCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ARPG_Souls_likeCharacter::OnBlockOverlapEnd);
 	}
 
+	Buff = int32(Weapon->StrengthBuff * CharacterAttribute.CharacterStrength + Weapon->AgilityBuff * CharacterAttribute.CharacterAgility);
+	Damage = int32(Weapon->Damage);
+
+	CharacterAttribute.CharacterAttackDamage = Buff + Damage;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -231,7 +235,7 @@ void ARPG_Souls_likeCharacter::OnAttackOverlapBegin(UPrimitiveComponent* Overlap
 {
 	//UE_LOG(LogTemp, Warning, TEXT("overlap begin: %s"), *OtherActor->GetName());
 	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
-		float const NewHealth = AI->GetHealth() - AI->GetMaxHealth()*0.1f;
+		float const NewHealth = AI->GetHealth() - CharacterAttribute.CharacterAttackDamage;
 		AI->SetHealth(NewHealth);
 	}
 }
@@ -332,11 +336,10 @@ FText ARPG_Souls_likeCharacter::GetCharacterBasic(int32 Max, int32 Current, FStr
 
 FText ARPG_Souls_likeCharacter::GetCharacterAttribute(int32 SelfAttribute, FString String)
 {
-	int32 OutAttribute;
-	int32 WeaponAttribute = 0;
-	OutAttribute = SelfAttribute + WeaponAttribute;
+	//int32 Buff = int32(Weapon->StrengthBuff * CharacterAttribute.CharacterStrength + Weapon->AgilityBuff * CharacterAttribute.CharacterAgility);
+	//int32 Damage = int32(Weapon->Damage);
 
-	FString NewString = String + FString::FromInt(SelfAttribute) + TEXT(" Weapon : ") + FString::FromInt(WeaponAttribute) + TEXT(" Total : ") + FString::FromInt(OutAttribute);
+	FString NewString = String + FString::FromInt(Damage) + TEXT(" + ") + FString::FromInt(Buff);
 	
 	return FText::FromString(NewString);
 }
@@ -380,6 +383,11 @@ void ARPG_Souls_likeCharacter::SetStamina(float const NewStamina)
 	else {
 		CharacterAttribute.CharacterCurrentStamina = NewStamina;
 	}
+}
+
+void ARPG_Souls_likeCharacter::SetExp(int32 const NewExp)
+{
+	CharacterAttribute.CharacterCurrentExp = NewExp;
 }
 
 void ARPG_Souls_likeCharacter::SpawnWeapon()

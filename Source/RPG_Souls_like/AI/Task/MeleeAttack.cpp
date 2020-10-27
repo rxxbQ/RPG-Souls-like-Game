@@ -20,8 +20,7 @@ EBTNodeResult::Type UMeleeAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 {
 	//get AI controller and AI character
 	ABaseAIController* const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
-	AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
-
+	
 	/*
 	if (ICombatInterface* const ICombat = Cast<ICombatInterface>(Ch)) {
 		if (MontageHasFinished(Ch)) {
@@ -29,15 +28,19 @@ EBTNodeResult::Type UMeleeAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 		}
 	}
 	*/
-	 
-	if (Ch) {
-		if (MontageHasFinished(Ch)) {
-			Ch->MeleeAttack();
-		}
-	}
+	if (Controller) {
+		AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
 
-	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-	return EBTNodeResult::Succeeded;
+		if (Ch) {
+			if (MontageHasFinished(Ch)) {
+				Ch->MeleeAttack();
+			}
+		}
+
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		return EBTNodeResult::Succeeded;
+	}
+	return EBTNodeResult::Failed;
 }
 
 bool UMeleeAttack::MontageHasFinished(AAICharacter* const Ch)

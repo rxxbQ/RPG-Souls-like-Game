@@ -11,7 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "RPG_Souls_like/RPG_Souls_likeCharacter.h"
 
-UFindPlayerLocation::UFindPlayerLocation(FObjectInitializer const& ObjectInitializer) 
+UFindPlayerLocation::UFindPlayerLocation(FObjectInitializer const& ObjectInitializer)
 {
 	NodeName = TEXT("Find Player Location");
 }
@@ -20,26 +20,36 @@ EBTNodeResult::Type UFindPlayerLocation::ExecuteTask(UBehaviorTreeComponent& Own
 {
 	//get player character and AI controller
 	ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	auto const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
 
-	//get player location to use as an origin
-	FVector const PlayerLocation = Player->GetActorLocation();
+	if (Player) {
+		auto const Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
 
-	if (SearchRandom) {
-		FNavLocation Location;
+		if (Controller) {
+			//get player location to use as an origin
+			FVector const PlayerLocation = Player->GetActorLocation();
 
-		//get the nagivation system and generate a random location near the player
-		UNavigationSystemV1* const NavSystem = UNavigationSystemV1::GetCurrent(GetWorld());
-		if (NavSystem->GetRandomPointInNavigableRadius(PlayerLocation, SearchRadius, Location, nullptr)) {
-			Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), Location.Location);
+			if (SearchRandom) {
+				FNavLocation Location;
+
+				//get the nagivation system and generate a random location near the player
+				if (UNavigationSystemV1* const NavSystem = UNavigationSystemV1::GetCurrent(GetWorld())) {
+					if (NavSystem->GetRandomPointInNavigableRadius(PlayerLocation, SearchRadius, Location, nullptr)) {
+						Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), Location.Location);
+					}
+				}
+
+			}
+			else {
+				Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), PlayerLocation);
+			}
+
+			//finish with success
+			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+
+			return EBTNodeResult::Succeeded;
 		}
+		
 	}
-	else {
-		Controller->GetBlackboard()->SetValueAsVector(GetSelectedBlackboardKey(), PlayerLocation);
-	}
-
-	//finish with success
-	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-
-	return EBTNodeResult::Succeeded;
+	return EBTNodeResult::Failed;
+	
 }
