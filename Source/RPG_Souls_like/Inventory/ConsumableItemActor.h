@@ -18,4 +18,8 @@ public:
     AConsumableItemActor();
 
     virtual bool UseItem();
+
+    void SetupHealth();
+
+    ACharacterPlayerController* Pc;
 };

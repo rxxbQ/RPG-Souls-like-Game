@@ -19,6 +19,9 @@
 #include "AICharacter.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Components/WidgetComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ARPG_Souls_likeCharacter
@@ -69,6 +72,17 @@ ARPG_Souls_likeCharacter::ARPG_Souls_likeCharacter()
 	RegenerateStamina = false;
 
 	Pc = Cast<ACharacterPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> ImpactMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Impact_Montage.Impact_Montage'"));
+	if (ImpactMontageObject.Succeeded()) {
+		ImpactMontage = ImpactMontageObject.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> BlockImpactMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/BlockImpact_Montage.BlockImpact_Montage'"));
+	if (BlockImpactMontageObject.Succeeded()) {
+		BlockImpactMontage = BlockImpactMontageObject.Object;
+	}
+
 }
 
 void ARPG_Souls_likeCharacter::BeginPlay()
@@ -95,6 +109,25 @@ void ARPG_Souls_likeCharacter::BeginPlay()
 	Damage = int32(Weapon->Damage);
 
 	CharacterAttribute.CharacterAttackDamage = Buff + Damage;
+}
+
+void ARPG_Souls_likeCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (ToggleLock) {
+		if (LockOnTarget) {
+			FVector TargetVector = FVector(LockOnTarget->GetActorLocation().X, LockOnTarget->GetActorLocation().Y, LockOnTarget->GetActorLocation().Z - 65.0f);
+			FRotator StrafeRotator = UKismetMathLibrary::FindLookAtRotation(FollowCamera->GetComponentLocation(), TargetVector);
+			FRotator ControllerRotator = UKismetMathLibrary::RInterpTo(GetController()->GetControlRotation(), StrafeRotator, DeltaTime, 3.0f);
+			FRotator CameraRotator = FRotator( ControllerRotator.Pitch -0.2f , ControllerRotator.Yaw, GetController()->GetControlRotation().Roll);
+			
+			GetController()->SetControlRotation(CameraRotator);
+
+			TargetEnemy();
+		}
+	}
+	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -139,7 +172,11 @@ void ARPG_Souls_likeCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	PlayerInputComponent->BindAction("Block", IE_Pressed, this, &ARPG_Souls_likeCharacter::BlockInput);
 	PlayerInputComponent->BindAction("Block", IE_Released, this, &ARPG_Souls_likeCharacter::BlockEnd);
 
-	
+	PlayerInputComponent->BindAction("Roll", IE_Pressed, this, &ARPG_Souls_likeCharacter::RollInput);
+	PlayerInputComponent->BindAction("Roll", IE_Released, this, &ARPG_Souls_likeCharacter::RollEnd);
+
+	PlayerInputComponent->BindAction("LockEnemy", IE_Pressed, this, &ARPG_Souls_likeCharacter::LockOnEnemy);
+
 }
 
 void ARPG_Souls_likeCharacter::OnResetVR()
@@ -171,7 +208,7 @@ void ARPG_Souls_likeCharacter::LookUpAtRate(float Rate)
 
 void ARPG_Souls_likeCharacter::MoveForward(float Value)
 {
-	if ((Controller != NULL) && (Value != 0.0f))
+	if ((Controller != NULL) && (Value != 0.0f) && HitRecover)
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -185,7 +222,7 @@ void ARPG_Souls_likeCharacter::MoveForward(float Value)
 
 void ARPG_Souls_likeCharacter::MoveRight(float Value)
 {
-	if ( (Controller != NULL) && (Value != 0.0f) )
+	if ( (Controller != NULL) && (Value != 0.0f) && HitRecover)
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -201,6 +238,8 @@ void ARPG_Souls_likeCharacter::MoveRight(float Value)
 void ARPG_Souls_likeCharacter::AttackStart()
 {
 	RegenerateStamina = false;
+	GetCharacterMovement()->DisableMovement();
+
 	Weapon->WeaponCollisionBox->SetCollisionProfileName("Weapon");
 	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(true);
 
@@ -212,6 +251,8 @@ void ARPG_Souls_likeCharacter::AttackStart()
 void ARPG_Souls_likeCharacter::AttackEnd()
 {
 	RegenerateStamina = true;
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
 	Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
 	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(false);
 	//Weapon->WeaponCollisionBox->SetGenerateOverlapEvents(false);
@@ -237,6 +278,8 @@ void ARPG_Souls_likeCharacter::OnAttackOverlapBegin(UPrimitiveComponent* Overlap
 	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
 		float const NewHealth = AI->GetHealth() - CharacterAttribute.CharacterAttackDamage;
 		AI->SetHealth(NewHealth);
+		AI->HitReaction();
+		
 	}
 }
 
@@ -249,16 +292,74 @@ void ARPG_Souls_likeCharacter::OnAttackOverlapEnd(UPrimitiveComponent* Overlappe
 void ARPG_Souls_likeCharacter::OnBlockOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
-		AttackBlocked = true;
+	//if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+	if (!AlreadyAttackedEnemy.Contains(OtherActor)) {
+
+		if (AWeaponItemActor* const EnemyWeapon = Cast<AWeaponItemActor>(OtherActor)) {
+			AttackBlocked = true;
+			AlreadyAttackedEnemy.Add(OtherActor);
+			//PlayAnimMontage(BlockImpactMontage, 1.0f, TEXT("Default"));
+		}
 	}
 }
 
 void ARPG_Souls_likeCharacter::OnBlockOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+	//if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+	if (AWeaponItemActor* const EnemyWeapon = Cast<AWeaponItemActor>(OtherActor)) {
 		AttackBlocked = false;
+		AlreadyAttackedEnemy.Empty();
+	}
+}
+
+void ARPG_Souls_likeCharacter::LockOnEnemy()
+{
+	ToggleLock = !ToggleLock;
+
+	if (ToggleLock) {
+		IsTargeted = true;
+	}
+	else {
+		IsTargeted = false;
+	}
+	TargetEnemy();
+}
+
+void ARPG_Souls_likeCharacter::TargetEnemy()
+{
+	FVector End = GetActorLocation() + GetActorForwardVector() * 1000.0f;
+	TArray<TEnumAsByte<EObjectTypeQuery>> TraceObjects;
+	TraceObjects.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+	FHitResult OutHit;
+	FHitResult LineHit;
+
+	UKismetSystemLibrary::SphereTraceSingleForObjects(GetWorld(), GetActorLocation(), End, 1000.0f, TraceObjects, false, ActorsToIgnore, EDrawDebugTrace::None, OutHit, true);
+	
+	AAICharacter* const AI = Cast<AAICharacter>(OutHit.GetActor());
+	if (AI) {
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetActorLocation(), AI->GetActorLocation(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore, EDrawDebugTrace::None, LineHit, true);
+
+		if (!LineHit.bBlockingHit && ToggleLock) {
+			LockOnTarget = AI;
+			IsTargeted = true;
+		}
+		else if(LineHit.bBlockingHit && ToggleLock){
+			LockOnTarget = NULL;
+			IsTargeted = false;
+		}
+		else if (!LineHit.bBlockingHit && !ToggleLock) {
+			LockOnTarget = NULL;
+			IsTargeted = false;
+		}
+		else if (LineHit.bBlockingHit && !ToggleLock) {
+			LockOnTarget = NULL;
+			IsTargeted = false;
+		}
+		
+		AI->ToggleLockOnTargetWidget(IsTargeted);
 	}
 }
 
@@ -266,6 +367,7 @@ void ARPG_Souls_likeCharacter::CastSpellStart()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("disable input"));
 	DisableInput(Pc);
+	//GetCharacterMovement()->DisableMovement();
 	
 }
 
@@ -273,6 +375,7 @@ void ARPG_Souls_likeCharacter::CastSpellEnd()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("enable input"));
 	EnableInput(Pc);
+	//GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 }
 
 void ARPG_Souls_likeCharacter::CastSpellInput()
@@ -282,19 +385,49 @@ void ARPG_Souls_likeCharacter::CastSpellInput()
 
 void ARPG_Souls_likeCharacter::BlockStart()
 {
-	RegenerateStamina = false;
+	//RegenerateStamina = false;
 	Shield->ShieldCollisionBox->SetCollisionProfileName("Shield");
 	Shield->ShieldCollisionBox->SetNotifyRigidBodyCollision(true);
 }
 
 void ARPG_Souls_likeCharacter::BlockEnd()
 {
-	RegenerateStamina = true;
+	//RegenerateStamina = true;
+	IsBlockPressed = false;
+	CharacterState = ECharacterState::Normal;
+
 	Shield->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
 	Shield->ShieldCollisionBox->SetNotifyRigidBodyCollision(false);
 }
 
 void ARPG_Souls_likeCharacter::BlockInput()
+{
+	IsBlockPressed = true;
+	CharacterState = ECharacterState::Block;
+
+	Shield->ShieldCollisionBox->SetCollisionProfileName("Shield");
+	Shield->ShieldCollisionBox->SetNotifyRigidBodyCollision(true);
+}
+
+void ARPG_Souls_likeCharacter::RollStart()
+{
+	RegenerateStamina = false;
+	//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SetActorEnableCollision(false);
+	//GetMesh()->SetCollisionProfileName("NoCollision");
+	GetCapsuleComponent()->SetCollisionProfileName("NoCollision");
+}
+
+void ARPG_Souls_likeCharacter::RollEnd()
+{
+	RegenerateStamina = true;
+	//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SetActorEnableCollision(true);
+	//GetMesh()->SetCollisionProfileName("Pawn");
+	GetCapsuleComponent()->SetCollisionProfileName("Pawn");
+}
+
+void ARPG_Souls_likeCharacter::RollInput()
 {
 
 }
@@ -390,6 +523,19 @@ void ARPG_Souls_likeCharacter::SetExp(int32 const NewExp)
 	CharacterAttribute.CharacterCurrentExp = NewExp;
 }
 
+
+void ARPG_Souls_likeCharacter::GettingHit()
+{
+	if (!AttackBlocked) {
+		PlayAnimMontage(ImpactMontage, 1.0f, TEXT("Default"));
+	}
+	else {
+		PlayAnimMontage(BlockImpactMontage, 1.0f, TEXT("Default"));
+	}
+	
+	
+}
+
 void ARPG_Souls_likeCharacter::SpawnWeapon()
 {
 	
@@ -425,6 +571,7 @@ void ARPG_Souls_likeCharacter::SpawnWeapon()
 					Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
 					Weapon->ShieldCollisionBox->SetHiddenInGame(true);
 					Weapon->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
+					Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
 					Weapon->Pickable = false;
 				//}
 			}
@@ -436,6 +583,7 @@ void ARPG_Souls_likeCharacter::SpawnWeapon()
 				Shield->MeshComponent->SetRelativeRotation(FQuat(FRotator(0, 0, 0)));
 				Shield->WeaponCollisionBox->SetHiddenInGame(true);
 				Shield->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
+				Shield->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
 				Shield->Pickable = false;
 				
 			}

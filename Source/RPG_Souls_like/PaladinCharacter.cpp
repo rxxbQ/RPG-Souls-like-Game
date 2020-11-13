@@ -9,6 +9,8 @@
 #include "Blueprint/UserWidget.h"
 #include "StatusHUD.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "AICharacter.h"
 
 APaladinCharacter::APaladinCharacter() 
 {
@@ -21,11 +23,16 @@ APaladinCharacter::APaladinCharacter()
 	GetMesh()->SetSkeletalMesh(PaladinSkeletalMesh);
 
 	//load animation instance
-	static ConstructorHelpers::FClassFinder<UAnimInstance> PaladinAnim(TEXT("AnimBlueprint'/Game/Assets/AnimBP/Paladin_BP.Paladin_BP_C'"));
-	if (PaladinAnim.Class) {
-		GetMesh()->SetAnimInstanceClass(PaladinAnim.Class);
-	}
+	//static ConstructorHelpers::FClassFinder<UAnimInstance> PaladinAnim(TEXT("AnimBlueprint'/Game/Assets/AnimBP/Paladin_BP.Paladin_BP_C'"));
+	//if (PaladinAnim.Class) {
+	//	GetMesh()->SetAnimInstanceClass(PaladinAnim.Class);
+	//}
 
+	UClass* AnimationClass = LoadObject<UClass>(NULL, TEXT("AnimBlueprint'/Game/Assets/AnimBP/Paladin_BP.Paladin_BP_C'"));
+	if (!AnimationClass) return;
+
+	GetMesh()->SetAnimInstanceClass(AnimationClass);
+	
 	//load attack animation montage
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> AttackMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Attack_Montage.Attack_Montage'"));
 	if (AttackMontageObject.Succeeded()) {
@@ -44,11 +51,31 @@ APaladinCharacter::APaladinCharacter()
 		BlockMontage = BlockMontageObject.Object;
 	}
 
+	//load roll animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> RollMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Rolling_Montage.Rolling_Montage'"));
+	if (RollMontageObject.Succeeded()) {
+		RollMontage = RollMontageObject.Object;
+	}
+
+	/*
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> RollbackMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/RollBack_Montage.RollBack_Montage'"));
+	if (RollbackMontageObject.Succeeded()) {
+		RollbackMontage = RollbackMontageObject.Object;
+	}
+	*/
+
+	// load execution animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> ExecutionMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Execution_Montage.Execution_Montage'"));
+	if (ExecutionMontageObject.Succeeded()) {
+		ExecutionMontage = ExecutionMontageObject.Object;
+	}
+
 	// load spell cast particle system
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> MyParticleSystem(TEXT("ParticleSystem'/Game/InfinityBladeEffects/Effects/FX_Ability/Heal/P_TerminusHeal.P_TerminusHeal'"));
 	if (MyParticleSystem.Succeeded()) {
 		SpellParticle = MyParticleSystem.Object;
 	}
+	
 
 	/* initialize attribute*/
 	CharacterAttribute.CharacterClass = ECharacterClass::Warrior;
@@ -144,21 +171,43 @@ void APaladinCharacter::AttackEnd()
 
 void APaladinCharacter::AttackInput()
 {
-	if (CharacterAttribute.CharacterCurrentStamina > 0) {
+	if (AttemptStealth()) {
+		if (IsValid(GetMesh()->GetAnimInstance()->GetCurrentActiveMontage())) {
+			float InRate = GetMesh()->GetAnimInstance()->GetCurrentActiveMontage()->SequenceLength / 2.0f;
+
+			GetWorld()->GetTimerManager().SetTimer(StealthTimerHandle, this, &APaladinCharacter::ResetStealth, InRate, false);
+		}
 		
-		int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
-		SetStamina(NewStamina);
+	}
+	else if (CharacterAttribute.CharacterCurrentStamina > 0 && !GetCharacterMovement()->IsFalling() && HitRecover && !StealthKill) {
+		
+		if (!IsAttacking) {
+			IsAttacking = true;
 
-		//generate a random number between 1 and 3
-		int MontageSectionIndex = rand() % 2 + 1;
+			switch(ComboCounter) {
+			case 0:
+				ComboCounter = 1;
+				//PlayHighPriorityMontage(AttackMontage, 1.0f, TEXT("start_1"));
+				PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_1"));
+				break;
+			case 1:
+				ComboCounter = 2;
+				PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_2"));
+				break;
+			case 2:
+				ComboCounter = 0;
+				PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_3"));
+				break;
+			}
 
-		//fstring animation section
-		FString MontageSection = "start_" + FString::FromInt(MontageSectionIndex);
-
-		PlayAnimMontage(AttackMontage, 1.0f, FName(*MontageSection));
+			int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
+			SetStamina(NewStamina);
+		}
+		else {
+			SaveAttack = true;
+		}
 
 	}
-
 	
 }
 
@@ -175,12 +224,7 @@ void APaladinCharacter::CastSpellEnd()
 void APaladinCharacter::CastSpellInput()
 {
 	
-	if (CharacterAttribute.CharacterCurrentMp > 0) {
-
-		int32 const NewMp = CharacterAttribute.CharacterCurrentMp - 65;
-		int32 const NewHealth = CharacterAttribute.CharacterCurrentHp + 891;
-		SetMana(NewMp);
-		SetHealth(NewHealth);
+	if (CharacterAttribute.CharacterCurrentMp > 0 && !GetCharacterMovement()->IsFalling() && HitRecover) {
 
 		//ParticleComponent = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SpellParticle, GetActorLocation(), GetActorRotation());
 		ParticleComponent = UGameplayStatics::SpawnEmitterAttached(SpellParticle, GetMesh(), "right_toe_socket", FVector(-30.0f, 0.0f, -60.0f));
@@ -191,10 +235,14 @@ void APaladinCharacter::CastSpellInput()
 		//fstring animation section
 		FString MontageSection = "Default";
 
-		PlayAnimMontage(CastSpellMontage, 1.0f, FName(*MontageSection));
-	}
-	else {
-		UE_LOG(LogTemp, Warning, TEXT("Not Enough Mana"));
+		PlayHighPriorityMontage(CastSpellMontage, 1.0f, FName(*MontageSection));
+
+		if (SuccessPlayMontage) {
+			int32 const NewMp = CharacterAttribute.CharacterCurrentMp - 65;
+			int32 const NewHealth = CharacterAttribute.CharacterCurrentHp + 891;
+			SetMana(NewMp);
+			SetHealth(NewHealth);
+		}
 	}
 	
 }
@@ -211,20 +259,174 @@ void APaladinCharacter::BlockEnd()
 
 void APaladinCharacter::BlockInput()
 {
-	if (CharacterAttribute.CharacterCurrentStamina > 0) {
+	ARPG_Souls_likeCharacter::BlockInput();
 
-		int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
-		SetStamina(NewStamina);
+	/*
+	if (CharacterAttribute.CharacterCurrentStamina > 0 && !GetCharacterMovement()->IsFalling() && HitRecover) {
 
 		//fstring animation section
 		FString MontageSection = "start_1";
 
-		PlayAnimMontage(BlockMontage, 1.0f, FName(*MontageSection));
+		PlayHighPriorityMontage(BlockMontage, 1.0f, FName(*MontageSection));
+
+		if (SuccessPlayMontage) {
+			int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
+			SetStamina(NewStamina);
+		}
 	}
+	*/
+}
+
+void APaladinCharacter::RollStart()
+{
+	ARPG_Souls_likeCharacter::RollStart();
+}
+
+void APaladinCharacter::RollEnd()
+{
+	ARPG_Souls_likeCharacter::RollEnd();
+}
+
+void APaladinCharacter::RollInput()
+{
+	if (CharacterAttribute.CharacterCurrentStamina > 0 && !GetCharacterMovement()->IsFalling() && HasMovementInput() && HitRecover && !IsAttacking) {
+
+		//fstring animation section
+		FString MontageSection = "start_1";
+
+		//SetActorRotation(GetLastMovementInputVector());
+		PlayHighPriorityMontage(RollMontage, 1.0f, FName(*MontageSection));
+
+		if (SuccessPlayMontage) {
+			int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
+			SetStamina(NewStamina);
+		}
+	}
+	/*
+	else if (CharacterAttribute.CharacterCurrentStamina > 0 && !GetCharacterMovement()->IsFalling() && !HasMovementInput()) {
+		//fstring animation section
+		FString MontageSection = "start_1";
+
+		//PlayAnimMontage(RollMontage, 1.0f, FName(*MontageSection));
+		PlayHighPriorityMontage(RollbackMontage, 1.0f, FName(*MontageSection));
+
+		if (SuccessPlayMontage) {
+			int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
+			SetStamina(NewStamina);
+		}
+	}
+	*/
 }
 
 void APaladinCharacter::TriggerRegenerateStamina()
 {
 	CharacterAttribute.CharacterCurrentStamina += 0.3f;
+}
+
+bool APaladinCharacter::HasMovementInput()
+{
+	return GetCharacterMovement()->GetLastInputVector() != FVector(0, 0, 0);
+}
+
+void APaladinCharacter::PlayHighPriorityMontage(UAnimMontage* Montage, float InPlayRate, FName StartSectionName)
+{
+	if (!GetMesh()->GetAnimInstance()->Montage_IsPlaying(Montage)) {
+		HighPriorityMontage = Montage;
+		SuccessPlayMontage = true;
+		PlayAnimMontage(HighPriorityMontage, InPlayRate, StartSectionName);
+	}
+	else {
+		SuccessPlayMontage = false;
+	}
+}
+
+void APaladinCharacter::ResetCombo()
+{
+	ComboCounter = 0;
+	SaveAttack = false;
+	IsAttacking = false;
+}
+
+void APaladinCharacter::SaveComboAttack()
+{
+	if (SaveAttack) {
+
+		SaveAttack = false;
+
+		switch (ComboCounter) {
+		case 0:
+			ComboCounter = 1;
+			//PlayHighPriorityMontage(AttackMontage, 1.0f, TEXT("start_1"));
+			PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_1"));
+			break;
+		case 1:
+			ComboCounter = 2;
+			PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_2"));
+			break;
+		case 2:
+			ComboCounter = 0;
+			PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_3"));
+			break;
+		}
+
+		int32 const NewStamina = CharacterAttribute.CharacterCurrentStamina - 20;
+		SetStamina(NewStamina);
+	}
+}
+
+bool APaladinCharacter::AttemptStealth()
+{
+	if (StealthKill == false) {
+		FVector End = GetActorLocation() + GetActorForwardVector() * 150.0f;
+		TArray<TEnumAsByte<EObjectTypeQuery>> TraceObjects;
+		TraceObjects.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+		TArray<AActor*> ActorsToIgnore;
+		ActorsToIgnore.Add(this);
+		FHitResult OutHit;
+
+		UKismetSystemLibrary::LineTraceSingleForObjects(GetWorld(), GetActorLocation(), End, TraceObjects, false, ActorsToIgnore, EDrawDebugTrace::None, OutHit, true);
+
+		L_HitActor = OutHit.GetActor();
+
+		AAICharacter* const AI = Cast<AAICharacter>(L_HitActor);
+		if (AI) {
+			if (AI->CanBeAssassinated() && CheckEnemyDistance(L_HitActor)) {
+				StealthKill = true;
+				PlayHighPriorityMontage(ExecutionMontage, 1.0f, TEXT("Default"));
+				AI->ExecuteStealth();
+
+				return true;
+			}
+			else {
+				return false;
+			}
+		}	
+	}
+
+	return false;
+}
+
+void APaladinCharacter::ResetStealth()
+{
+	StealthKill = false;
+	CloseToEnemy = false;
+
+	GetWorld()->GetTimerManager().ClearTimer(StealthTimerHandle);
+}
+
+bool APaladinCharacter::CheckEnemyDistance(AActor* ExecutionHitActor)
+{
+	if (IsValid(ExecutionHitActor)) {
+		EnemyDistance = (GetActorLocation() - ExecutionHitActor->GetActorLocation()).Size();
+
+		if (EnemyDistance <= 200) {
+			CloseToEnemy = true;
+		}
+		else {
+			CloseToEnemy = false;
+		}
+	}
+	
+	return CloseToEnemy;
 }
 

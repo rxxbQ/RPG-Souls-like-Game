@@ -156,6 +156,9 @@ protected:
 
 	bool RegenerateStamina;
 
+	// character state
+	TEnumAsByte<ECharacterState> CharacterState;
+
 public:
 	/* get attribute text block*/
 	//get character class
@@ -180,10 +183,25 @@ public:
 
 	void SetExp(int32 const NewExp);
 
+	/* impact montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* ImpactMontage;
+
+	/* block_impact montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* BlockImpactMontage;
+
+	void GettingHit();
+
+	//able or unable to receive inputs
+	bool HitRecover = true;
+
 	//spawn weapon
 	void SpawnWeapon();
 
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaTime) override;
 
 	class ACharacterPlayerController* Pc;
 
@@ -232,6 +250,23 @@ public:
 	*/
 	virtual void BlockInput();
 
+	bool IsBlockPressed;
+
+	/**
+	* RollStart - trigger when the player initiates a Roll
+	*/
+	virtual void RollStart();
+
+	/**
+	* RollEnd - trigger when the player stops a Roll
+	*/
+	virtual void RollEnd();
+
+	/**
+	* RollInput - trigger Roll animations based on user input
+	*/
+	virtual void RollInput();
+
 	/**
 	* OnAttackHit - triggerred when the collision hit event fires between the weapon and enmy eneities
 	*/
@@ -271,6 +306,16 @@ public:
 
 	int32 Damage;
 
+	void LockOnEnemy();
+
+	void TargetEnemy();
+
+	AActor* LockOnTarget;
+
+	bool ToggleLock = false;
+
+	bool IsTargeted;
+
 
 private:
 	class UAIPerceptionStimuliSourceComponent* Stimulus;
@@ -281,6 +326,8 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound", meta = (AllowPrivateAccess = "true"))
 		USoundBase* DistractionSound;
+
+	TArray<AActor*> AlreadyAttackedEnemy;
 
 };
 

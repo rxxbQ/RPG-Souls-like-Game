@@ -45,5 +45,5 @@ EBTNodeResult::Type UMeleeAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 
 bool UMeleeAttack::MontageHasFinished(AAICharacter* const Ch)
 {
-	return !Ch->GetMesh()->GetAnimInstance()->Montage_IsPlaying(Ch->GetMontage());
+	return !Ch->GetMesh()->GetAnimInstance()->Montage_IsPlaying(Ch->GetAttackMontage());
 }

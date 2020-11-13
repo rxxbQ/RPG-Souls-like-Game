@@ -30,4 +30,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 		bool IsInAir;
+
+	UPROPERTY(BlueprintReadOnly)
+		bool IsBlocking;
 };

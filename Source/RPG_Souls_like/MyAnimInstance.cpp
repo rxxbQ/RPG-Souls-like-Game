@@ -18,5 +18,7 @@ void UMyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Direction = CalculateDirection(Length, Rotator);
 
 		IsInAir = Ch->GetCharacterMovement()->IsFalling();
+
+		IsBlocking = Ch->IsBlockPressed;
 	}
 }

@@ -11,6 +11,7 @@
 #include "ItemUserWidget.h"
 #include "CharacterPlayerController.h"
 #include "BagUserWidget.h"
+#include "RPG_Souls_like/RPG_Souls_likeCharacter.h"
 
 UInventoryUserWidget::UInventoryUserWidget(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer) 
 {
@@ -129,6 +130,8 @@ FEventReply UInventoryUserWidget::MouseUpEvent(FGeometry MyGeometry, const FPoin
 				ACharacterPlayerController* Pc = Cast<ACharacterPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 
 				if (Pc) {
+					ARPG_Souls_likeCharacter* Player = Cast<ARPG_Souls_likeCharacter>(Pc->GetPawn());
+
 					switch (ItemActor->ItemAllType.ItemType.GetValue()) {
 					case E_Weapon:
 						UE_LOG(LogTemp, Warning, TEXT("weapon"));
@@ -137,12 +140,20 @@ FEventReply UInventoryUserWidget::MouseUpEvent(FGeometry MyGeometry, const FPoin
 						break;
 					case E_Consumable:
 						UE_LOG(LogTemp, Warning, TEXT("consumable"));
+
+						if (Player) {
+							UE_LOG(LogTemp, Warning, TEXT("used potion"));
+							int32 const NewHealth = Player->GetCharacterProperty().CharacterCurrentHp - 100;
+							Player->SetHealth(NewHealth);
+						}
+
 						LocalItemUserWidget = Pc->BagUserWidget->ConsumableItemUserWidget;
 						
 						//reduce item amount
 						InventoryInfo.ItemAmount -= 1;
 						AddItemAmountText(InventoryInfo.ItemAmount);
 						break;
+
 					case E_Task:
 						UE_LOG(LogTemp, Warning, TEXT("task"));
 						LocalItemUserWidget = Pc->BagUserWidget->TaskItemUserWidget;

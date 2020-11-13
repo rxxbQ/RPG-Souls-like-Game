@@ -17,7 +17,9 @@
 #include "Components/BoxComponent.h"
 #include "RPG_Souls_likeCharacter.h"
 #include "RPG_Souls_like/Inventory/WeaponItemActor.h"
+#include "RPG_Souls_like/Inventory/ConsumableItemActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "RPG_Souls_like/AI/Blackboard/BlackboardKeys.h"
 
 //#include "RPG_Souls_like/AI/BlackBoard/BaseBlackboardData.h"
 
@@ -42,19 +44,36 @@ AAICharacter::AAICharacter()
 
 	Exp = 250;
 
-	WidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	AbleToAttack = true;
 
-	if (WidgetComp) {
-		WidgetComp->SetupAttachment(RootComponent);
-		WidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
-		WidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 85.0f));
+	HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
 
-		static ConstructorHelpers::FClassFinder<UUserWidget> WidgetClass(TEXT("WidgetBlueprint'/Game/AI/UI/HealthBar_BP.HealthBar_BP_C'"));
-		if (WidgetClass.Succeeded()) {
-			WidgetComp->SetWidgetClass(WidgetClass.Class);
+	if (HealthWidgetComp) {
+		HealthWidgetComp->SetupAttachment(RootComponent);
+		HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+		HealthWidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 90.0f));
+
+		static ConstructorHelpers::FClassFinder<UUserWidget> HealthWidgetClass(TEXT("WidgetBlueprint'/Game/AI/UI/HealthBar_BP.HealthBar_BP_C'"));
+		if (HealthWidgetClass.Succeeded()) {
+			HealthWidgetComp->SetWidgetClass(HealthWidgetClass.Class);
 		}
 	}
 
+	LockOnTargetWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("LockOn"));
+
+	if (LockOnTargetWidget) {
+		LockOnTargetWidget->SetupAttachment(RootComponent);
+		LockOnTargetWidget->SetWidgetSpace(EWidgetSpace::Screen);
+		LockOnTargetWidget->SetRelativeLocation(FVector(0.0f, 0.0f, 40.0f));
+		LockOnTargetWidget->SetVisibility(false);
+
+		static ConstructorHelpers::FClassFinder<UUserWidget> LockOnTargetWidgetClass(TEXT("WidgetBlueprint'/Game/AI/UI/LockOnTargetUI.LockOnTargetUI_C'"));
+		if (LockOnTargetWidgetClass.Succeeded()) {
+			LockOnTargetWidget->SetWidgetClass(LockOnTargetWidgetClass.Class);
+		}
+	}
+
+	/*
 	RightFistCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RightFistCollisionBox"));
 
 	if (RightFistCollisionBox) {
@@ -62,12 +81,32 @@ AAICharacter::AAICharacter()
 		RightFistCollisionBox->SetBoxExtent(extent, false);
 		RightFistCollisionBox->SetCollisionProfileName("NoCollision");
 	}
+	*/
+
+	// load execution animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> ExecutionMontageObject(TEXT("AnimMontage'/Game/AI/Animation/Brutal_Assassination_Victim_Montage.Brutal_Assassination_Victim_Montage'"));
+	if (ExecutionMontageObject.Succeeded()) {
+		ExecutionMontage = ExecutionMontageObject.Object;
+	}
+
+	//load hit reaction animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> HitReactionMontageObject(TEXT("AnimMontage'/Game/AI/Animation/HitReaction_Montage.HitReaction_Montage'"));
+	if (HitReactionMontageObject.Succeeded()) {
+		HitReactionMontage = HitReactionMontageObject.Object;
+	}
 }
 
 void AAICharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	AAICharacter::SpawnWeapon();
+
+	if (Weapon) {
+		Weapon->WeaponCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AAICharacter::OnAttackOverlapBegin);
+		Weapon->WeaponCollisionBox->OnComponentEndOverlap.AddDynamic(this, &AAICharacter::OnAttackOverlapEnd);
+	}
+	/*
 	if (RightFistCollisionBox) {
 		FAttachmentTransformRules const Rules(
 			EAttachmentRule::SnapToTarget,
@@ -84,13 +123,14 @@ void AAICharacter::BeginPlay()
 		RightFistCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AAICharacter::OnAttackOverlapBegin);
 		RightFistCollisionBox->OnComponentEndOverlap.AddDynamic(this, &AAICharacter::OnAttackOverlapEnd);
 	}
+	*/
 }
 
 void AAICharacter::Tick(float const DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	auto const UserWidget = Cast<UHealthBar>(WidgetComp->GetUserWidgetObject());
+	auto const UserWidget = Cast<UHealthBar>(HealthWidgetComp->GetUserWidgetObject());
 	if (UserWidget) {
 		UserWidget->SetBarValuePercent(Health / MaxHealth);
 	}
@@ -114,14 +154,14 @@ int AAICharacter::MeleeAttack_Implementation()
 
 void AAICharacter::MeleeAttack()
 {
-	if (Montage) {
-		PlayAnimMontage(Montage);
+	if (AttackMontage && AbleToAttack) {
+		PlayAnimMontage(AttackMontage);
 	}
 }
 
-UAnimMontage* AAICharacter::GetMontage() const
+UAnimMontage* AAICharacter::GetAttackMontage() const
 {
-	return Montage;
+	return AttackMontage;
 }
 
 float AAICharacter::GetHealth() const
@@ -144,24 +184,46 @@ void AAICharacter::SetHealth(float const NewHealth)
 	Health = NewHealth;
 
 	if (Health <= 0) {
-		UE_LOG(LogTemp, Warning, TEXT("Enemy dies"));
-		//GetMesh()->SetSimulatePhysics(true);
-		ARPG_Souls_likeCharacter* const Ch = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-		Ch->SetExp(Ch->GetCharacterProperty().CharacterCurrentExp + Exp);
-		Destroy();
+		ExecuteRadgoll();
+
+		GetWorld()->GetTimerManager().SetTimer(DeathTimeHandler, this, &AAICharacter::Death, 2.f, false);
 	}
 }
 
 void AAICharacter::AttackStart()
 {
-	RightFistCollisionBox->SetCollisionProfileName("EnemyWeapon");
-	RightFistCollisionBox->SetNotifyRigidBodyCollision(true);
+	//RightFistCollisionBox->SetCollisionProfileName("EnemyWeapon");
+	//RightFistCollisionBox->SetNotifyRigidBodyCollision(true);
+	Weapon->WeaponCollisionBox->SetCollisionProfileName("EnemyWeapon");
+	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(true);
 }
 
 void AAICharacter::AttackEnd()
 {
-	RightFistCollisionBox->SetCollisionProfileName("NoCollision");
-	RightFistCollisionBox->SetNotifyRigidBodyCollision(false);
+	//RightFistCollisionBox->SetCollisionProfileName("NoCollision");
+	//RightFistCollisionBox->SetNotifyRigidBodyCollision(false);
+	Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
+	Weapon->WeaponCollisionBox->SetNotifyRigidBodyCollision(false);
+}
+
+bool AAICharacter::CanBeAssassinated()
+{
+	ABaseAIController* AIController = Cast<ABaseAIController>(GetController());
+	
+	if (AIController) {
+		bool CanBeAssassinated = AIController->GetBlackboard()->GetValueAsBool(BbKeys::CanSeePlayer);
+		return !CanBeAssassinated;
+	}
+	return false;
+}
+
+void AAICharacter::ExecuteStealth()
+{
+	GetCharacterMovement()->DisableMovement();
+	PlayAnimMontage(ExecutionMontage, 1.0f, TEXT("Default"));
+
+	GetWorld()->GetTimerManager().SetTimer(DeathTimeHandler, this, &AAICharacter::Death, 4.5f, false);
+
 }
 
 void AAICharacter::SetPatrolPath(APatrolPath* const Path)
@@ -176,13 +238,21 @@ void AAICharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent
 	//	AttackBlocked = true;
 	//	UE_LOG(LogTemp, Warning, TEXT("overlap begin: %s"), *OtherActor->GetName());
 	//}
-	if (ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(OtherActor)) {
-		if (Player->AttackBlocked == false) {
-			int32 const NewHealth = Player->GetCharacterProperty().CharacterCurrentHp - Player->GetCharacterProperty().CharacterMaxHp * 0.07;
-			Player->SetHealth(NewHealth);
-		}
-		else {
-			UE_LOG(LogTemp, Warning, TEXT("Attack Get Blocked"));
+	if (!AlreadyDamagedPlayer.Contains(OtherActor)) {
+		if (ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(OtherActor)) {
+			if (Player->AttackBlocked == false) {
+				int32 const NewHealth = Player->GetCharacterProperty().CharacterCurrentHp - Player->GetCharacterProperty().CharacterMaxHp * 0.07;
+				Player->SetHealth(NewHealth);
+				
+				AlreadyDamagedPlayer.Add(OtherActor);
+				UE_LOG(LogTemp, Warning, TEXT("Hit start"));
+			}
+			else {
+				float const NewStamina = Player->GetCharacterProperty().CharacterCurrentStamina - 30;
+				Player->SetStamina(NewStamina);
+				UE_LOG(LogTemp, Warning, TEXT("Attack Get Blocked"));
+			}
+			Player->GettingHit();
 		}
 	}
 }
@@ -190,9 +260,98 @@ void AAICharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent
 void AAICharacter::OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	AlreadyDamagedPlayer.Empty();
 	//if (AWeaponItemActor* const Shield = Cast<AWeaponItemActor>(OtherActor)) {
 	//	AttackBlocked = false;
 	//}
+}
+
+void AAICharacter::HitReaction()
+{
+	AbleToAttack = false;
+	PlayAnimMontage(HitReactionMontage, 1.0f, TEXT("Default"));
+}
+
+void AAICharacter::ToggleLockOnTargetWidget(bool IsTargeted)
+{
+	if (IsTargeted) {
+		LockOnTargetWidget->SetVisibility(true);
+	}
+	else {
+		LockOnTargetWidget->SetVisibility(false);
+	}
+	
+}
+
+void AAICharacter::SpawnWeapon()
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.bNoFail = true;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+
+	if (WeaponClass) {
+		FTransform WeaponTransform;
+		WeaponTransform.SetLocation(FVector::ZeroVector);
+		WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
+
+		Weapon = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
+
+		if (Weapon) {
+			//UE_LOG(LogTemp, Warning, TEXT("%d"), Weapon->WeaponNum);
+			//if (Weapon->WeaponNum != 0) {
+			//	if (Weapon->WeaponNum == 1) {
+			//		Weapon->WeaponOnHand = FName(TEXT("BlackKnight"));
+			//	}
+			//	else if (Weapon->WeaponNum == 3) {
+			//		Weapon->WeaponOnHand = FName(TEXT("DragonSword"));
+			//	}
+			//	Weapon->SetActorEnableCollision(false);
+			Weapon->SetupWeapon(FName("BlackKnight"));
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("hand_r_socket"));
+			Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
+			Weapon->ShieldCollisionBox->SetHiddenInGame(true);
+			Weapon->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
+			Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
+			Weapon->Pickable = false;
+			//}
+		}
+	}
+}
+
+void AAICharacter::SpawnLoot()
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.bNoFail = true;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+
+	if (ConsumableClass) {
+		FTransform ConsumableTransform;
+		ConsumableTransform.SetLocation(GetMesh()->GetSocketTransform(TEXT("foot_r")).GetLocation());
+
+		Consumable = GetWorld()->SpawnActor<AConsumableItemActor>(ConsumableClass, ConsumableTransform, SpawnParams);
+
+		if (Consumable) {
+			Consumable->Pickable = true;
+		}
+		
+	}
+}
+
+void AAICharacter::ExecuteRadgoll()
+{
+	GetMesh()->SetCollisionProfileName("Ragdoll");
+	GetMesh()->SetAllBodiesBelowSimulatePhysics("pelvis", true, true);
+}
+
+void AAICharacter::Death()
+{
+	ARPG_Souls_likeCharacter* const Ch = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	Ch->SetExp(Ch->GetCharacterProperty().CharacterCurrentExp + Exp);
+	//SpawnLoot();
+	Destroy();
+	Weapon->Destroy();
 }
 
 /*

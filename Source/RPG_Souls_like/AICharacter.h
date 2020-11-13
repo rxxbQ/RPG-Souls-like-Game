@@ -40,7 +40,7 @@ public:
 
     void MeleeAttack();
 
-    UAnimMontage* GetMontage() const;
+    UAnimMontage* GetAttackMontage() const;
 
     float GetHealth() const;
 
@@ -53,6 +53,15 @@ public:
     virtual void AttackStart();
 
     virtual void AttackEnd();
+
+    UFUNCTION()
+        bool CanBeAssassinated();
+
+    void ExecuteStealth();
+
+    class AWeaponItemActor* Weapon;
+
+    class AConsumableItemActor* Consumable;
 
     void SetPatrolPath(APatrolPath* const Path);
     /**
@@ -68,20 +77,57 @@ public:
     UFUNCTION()
         void OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+    FTimerHandle DeathTimeHandler;
+
+    void HitReaction();
+
+    void ToggleLockOnTargetWidget(bool IsTargeted);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
         APatrolPath* PatrolPath;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
-        UAnimMontage* Montage;
+        UAnimMontage* AttackMontage;
 
-    class UWidgetComponent* WidgetComp;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+       class UAnimMontage* ExecutionMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+        class UAnimMontage* HitReactionMontage;
+
+    class UWidgetComponent* HealthWidgetComp;
+
+    class UWidgetComponent* LockOnTargetWidget;
 
     float const MaxHealth = 582.0f;
 
     float Health;
 
     int32 Exp;
+
+    // weapon base
+    UPROPERTY(EditAnywhere)
+        TSubclassOf<class AWeaponItemActor> WeaponClass;
+
+    // item base
+    UPROPERTY(EditAnywhere)
+        TSubclassOf<class AConsumableItemActor> ConsumableClass;
+
+    //spawn weapon
+    void SpawnWeapon();
+
+    //spawn loot after death
+    void SpawnLoot();
+
+    TArray<AActor*> AlreadyDamagedPlayer;
+
+    void ExecuteRadgoll();
+
+    void Death();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbleToAttack", meta = (AllowPrivateAccess = "true"))
+        bool AbleToAttack;
 
     /*
     UFUNCTION()

@@ -12,3 +12,10 @@ enum ECharacterClass {
 	Knight,
 	Deprived
 };
+
+//character state
+enum ECharacterState {
+	Normal,
+	Block,
+	Crouch
+};

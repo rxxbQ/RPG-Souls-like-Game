@@ -4,6 +4,7 @@
 #include "ItemActor.h"
 #include "Components/CapsuleComponent.h"
 #include "RPG_Souls_like/CharacterPlayerController.h"
+#include "RPG_Souls_like/RPG_Souls_likeCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "RPG_Souls_like/ItemUserWidget.h"
 #include "RPG_Souls_like/BagUserWidget.h"
@@ -194,27 +195,7 @@ bool AItemActor::ItemIsTheSame(uint16& Index, UItemUserWidget* ItemBag)
 
 bool AItemActor::UseItem()
 {
-	//get character object
-	//BaseCharacter = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GEngine->GetWorldContexts()[0].World(), 0));
-	//BaseCharacter->SpawnWeapon();
-	/*
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.bNoFail = true;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	if (WeaponClass) {
-		FTransform WeaponTransform;
-		WeaponTransform.SetLocation(FVector::ZeroVector);
-		WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
-
-		Weapon = GEngine->GetWorldContexts()[0].World()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
-
-		if (Weapon) {
-			Weapon->AttachToComponent(BaseCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_r"));
-			Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
-		}
-	}
-	*/
 	return false;
 }
 
