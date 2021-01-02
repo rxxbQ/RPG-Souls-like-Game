@@ -33,11 +33,13 @@ APaladinCharacter::APaladinCharacter()
 
 	GetMesh()->SetAnimInstanceClass(AnimationClass);
 	
+	/*
 	//load attack animation montage
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> AttackMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Attack_Montage.Attack_Montage'"));
 	if (AttackMontageObject.Succeeded()) {
 		AttackMontage = AttackMontageObject.Object;
 	}
+	*/
 
 	//load spell cast animation montage
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> CastSpellMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/CastSpell_Montage.CastSpell_Montage'"));
@@ -70,13 +72,30 @@ APaladinCharacter::APaladinCharacter()
 		ExecutionMontage = ExecutionMontageObject.Object;
 	}
 
+	// load slash1 animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> SlashMontage_1Object(TEXT("AnimMontage'/Game/Assets/AnimBP/Slash1_Montage.Slash1_Montage'"));
+	if (SlashMontage_1Object.Succeeded()) {
+		SlashMontage_1 = SlashMontage_1Object.Object;
+	}
+
+	// load slash2 animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> SlashMontage_2Object(TEXT("AnimMontage'/Game/Assets/AnimBP/Slash2_Montage.Slash2_Montage'"));
+	if (SlashMontage_2Object.Succeeded()) {
+		SlashMontage_2 = SlashMontage_2Object.Object;
+	}
+
+	// load slash3 animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> SlashMontage_3Object(TEXT("AnimMontage'/Game/Assets/AnimBP/Slash3_Montage.Slash3_Montage'"));
+	if (SlashMontage_3Object.Succeeded()) {
+		SlashMontage_3 = SlashMontage_3Object.Object;
+	}
+
 	// load spell cast particle system
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> MyParticleSystem(TEXT("ParticleSystem'/Game/InfinityBladeEffects/Effects/FX_Ability/Heal/P_TerminusHeal.P_TerminusHeal'"));
 	if (MyParticleSystem.Succeeded()) {
 		SpellParticle = MyParticleSystem.Object;
 	}
 	
-
 	/* initialize attribute*/
 	CharacterAttribute.CharacterClass = ECharacterClass::Warrior;
 
@@ -166,7 +185,6 @@ void APaladinCharacter::AttackStart()
 void APaladinCharacter::AttackEnd()
 {
 	ARPG_Souls_likeCharacter::AttackEnd();
-	//PlayAnimMontage(AttackMontage, 1.0f, FName("end_1"));
 }
 
 void APaladinCharacter::AttackInput()
@@ -188,15 +206,18 @@ void APaladinCharacter::AttackInput()
 			case 0:
 				ComboCounter = 1;
 				//PlayHighPriorityMontage(AttackMontage, 1.0f, TEXT("start_1"));
-				PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_1"));
+				//PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_1"));
+				PlayAnimMontage(SlashMontage_1, 1.0f, TEXT("Default"));
 				break;
 			case 1:
 				ComboCounter = 2;
-				PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_2"));
+				//PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_2"));
+				PlayAnimMontage(SlashMontage_2, 1.0f, TEXT("Default"));
 				break;
 			case 2:
 				ComboCounter = 0;
-				PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_3"));
+				//PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_3"));
+				PlayAnimMontage(SlashMontage_3, 1.0f, TEXT("Default"));
 				break;
 			}
 
@@ -259,11 +280,10 @@ void APaladinCharacter::BlockEnd()
 
 void APaladinCharacter::BlockInput()
 {
-	ARPG_Souls_likeCharacter::BlockInput();
-
-	/*
 	if (CharacterAttribute.CharacterCurrentStamina > 0 && !GetCharacterMovement()->IsFalling() && HitRecover) {
-
+		ARPG_Souls_likeCharacter::BlockInput();
+	}
+	/*
 		//fstring animation section
 		FString MontageSection = "start_1";
 
@@ -357,15 +377,18 @@ void APaladinCharacter::SaveComboAttack()
 		case 0:
 			ComboCounter = 1;
 			//PlayHighPriorityMontage(AttackMontage, 1.0f, TEXT("start_1"));
-			PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_1"));
+			//PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_1"));
+			PlayAnimMontage(SlashMontage_1, 1.0f, TEXT("Default"));
 			break;
 		case 1:
 			ComboCounter = 2;
-			PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_2"));
+			//PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_2"));
+			PlayAnimMontage(SlashMontage_2, 1.0f, TEXT("Default"));
 			break;
 		case 2:
 			ComboCounter = 0;
-			PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_3"));
+			//PlayAnimMontage(AttackMontage, 1.0f, TEXT("start_3"));
+			PlayAnimMontage(SlashMontage_3, 1.0f, TEXT("Default"));
 			break;
 		}
 

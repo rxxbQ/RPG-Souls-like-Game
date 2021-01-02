@@ -46,7 +46,7 @@ public:
 
     float GetMaxHealth() const;
 
-    int GetExp() const;
+    uint32 GetExp() const;
 
     void SetHealth(float const NewHealth);
 
@@ -58,10 +58,6 @@ public:
         bool CanBeAssassinated();
 
     void ExecuteStealth();
-
-    class AWeaponItemActor* Weapon;
-
-    class AConsumableItemActor* Consumable;
 
     void SetPatrolPath(APatrolPath* const Path);
     /**
@@ -83,12 +79,15 @@ public:
 
     void ToggleLockOnTargetWidget(bool IsTargeted);
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
+        bool NeedToPatrol;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
         APatrolPath* PatrolPath;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
-        UAnimMontage* AttackMontage;
+        class UAnimMontage* AttackMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
        class UAnimMontage* ExecutionMontage;
@@ -100,19 +99,23 @@ private:
 
     class UWidgetComponent* LockOnTargetWidget;
 
-    float const MaxHealth = 582.0f;
+    float const MaxHealth = 218.0f;
 
     float Health;
 
-    int32 Exp;
+    uint32 Exp;
 
     // weapon base
     UPROPERTY(EditAnywhere)
-        TSubclassOf<class AWeaponItemActor> WeaponClass;
+        TSubclassOf<class ABladeWeapon> WeaponClass;
+
+    class ABladeWeapon* Weapon;
 
     // item base
     UPROPERTY(EditAnywhere)
         TSubclassOf<class AConsumableItemActor> ConsumableClass;
+
+    class AConsumableItemActor* Consumable;
 
     //spawn weapon
     void SpawnWeapon();

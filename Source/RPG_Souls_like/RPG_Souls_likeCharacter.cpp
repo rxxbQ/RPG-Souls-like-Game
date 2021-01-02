@@ -10,6 +10,8 @@
 #include "CharacterPlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Inventory/WeaponItemActor.h"
+#include "Inventory/ShieldWeapon.h"
+#include "Inventory/BladeWeapon.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
 #include "Perception/AISense_Hearing.h"
@@ -17,11 +19,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 #include "AICharacter.h"
+#include "BossCharacter.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/WidgetComponent.h"
+#include "RPG_Souls_like/GamePlayerUserWidget/CharacterAttributeUserWidget.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ARPG_Souls_likeCharacter
@@ -71,16 +75,26 @@ ARPG_Souls_likeCharacter::ARPG_Souls_likeCharacter()
 
 	RegenerateStamina = false;
 
+	TeamId = FGenericTeamId(0);
+
 	Pc = Cast<ACharacterPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
 
+	//load normal impact anim montage
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> ImpactMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/Impact_Montage.Impact_Montage'"));
 	if (ImpactMontageObject.Succeeded()) {
 		ImpactMontage = ImpactMontageObject.Object;
 	}
 
+	// load block impact anim montage
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> BlockImpactMontageObject(TEXT("AnimMontage'/Game/Assets/AnimBP/BlockImpact_Montage.BlockImpact_Montage'"));
 	if (BlockImpactMontageObject.Succeeded()) {
 		BlockImpactMontage = BlockImpactMontageObject.Object;
+	}
+
+	// load levelup particle system
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> LevelParticleComponentObject(TEXT("ParticleSystem'/Game/InfinityBladeEffects/Effects/FX_Skill_Leap/P_Skill_Leap_Base_Charge_Weapon.P_Skill_Leap_Base_Charge_Weapon'"));
+	if (LevelParticleComponentObject.Succeeded()) {
+		LevelParticleSystem = LevelParticleComponentObject.Object;
 	}
 
 }
@@ -124,10 +138,9 @@ void ARPG_Souls_likeCharacter::Tick(float DeltaTime)
 			
 			GetController()->SetControlRotation(CameraRotator);
 
-			TargetEnemy();
+			//TargetEnemy();
 		}
 	}
-	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -274,32 +287,37 @@ void ARPG_Souls_likeCharacter::OnAttackHit(UPrimitiveComponent* HitComponent,
 void ARPG_Souls_likeCharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("overlap begin: %s"), *OtherActor->GetName());
-	if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
-		float const NewHealth = AI->GetHealth() - CharacterAttribute.CharacterAttackDamage;
-		AI->SetHealth(NewHealth);
-		AI->HitReaction();
-		
+	if (!AlreadyAttackedEnemy.Contains(OtherActor)) {
+		if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
+			float const NewHealth = AI->GetHealth() - CharacterAttribute.CharacterAttackDamage;
+			AI->SetHealth(NewHealth);
+			AI->HitReaction();
+
+			AlreadyAttackedEnemy.Add(OtherActor);
+		}
+		else if (ABossCharacter* const Boss = Cast<ABossCharacter>(OtherActor)) {
+			float const NewHealth = Boss->GetHealth() - (CharacterAttribute.CharacterAttackDamage * Boss->GetAttackDefence());
+			Boss->SetHealth(NewHealth);
+			//Boss->HitReaction();
+			UE_LOG(LogTemp, Warning, TEXT("attck start"));
+			AlreadyAttackedEnemy.Add(OtherActor);
+		}
 	}
 }
 
 void ARPG_Souls_likeCharacter::OnAttackOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("overlap end: %s"), *OtherActor->GetName());
+	AlreadyAttackedEnemy.Empty();
 }
 
 void ARPG_Souls_likeCharacter::OnBlockOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
-	if (!AlreadyAttackedEnemy.Contains(OtherActor)) {
-
 		if (AWeaponItemActor* const EnemyWeapon = Cast<AWeaponItemActor>(OtherActor)) {
 			AttackBlocked = true;
-			AlreadyAttackedEnemy.Add(OtherActor);
 			//PlayAnimMontage(BlockImpactMontage, 1.0f, TEXT("Default"));
-		}
 	}
 }
 
@@ -309,7 +327,6 @@ void ARPG_Souls_likeCharacter::OnBlockOverlapEnd(UPrimitiveComponent* Overlapped
 	//if (AAICharacter* const AI = Cast<AAICharacter>(OtherActor)) {
 	if (AWeaponItemActor* const EnemyWeapon = Cast<AWeaponItemActor>(OtherActor)) {
 		AttackBlocked = false;
-		AlreadyAttackedEnemy.Empty();
 	}
 }
 
@@ -338,8 +355,7 @@ void ARPG_Souls_likeCharacter::TargetEnemy()
 
 	UKismetSystemLibrary::SphereTraceSingleForObjects(GetWorld(), GetActorLocation(), End, 1000.0f, TraceObjects, false, ActorsToIgnore, EDrawDebugTrace::None, OutHit, true);
 	
-	AAICharacter* const AI = Cast<AAICharacter>(OutHit.GetActor());
-	if (AI) {
+	if (AAICharacter* const AI = Cast<AAICharacter>(OutHit.GetActor())) {
 		UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetActorLocation(), AI->GetActorLocation(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore, EDrawDebugTrace::None, LineHit, true);
 
 		if (!LineHit.bBlockingHit && ToggleLock) {
@@ -360,6 +376,28 @@ void ARPG_Souls_likeCharacter::TargetEnemy()
 		}
 		
 		AI->ToggleLockOnTargetWidget(IsTargeted);
+	}
+	else if (ABossCharacter* const Boss = Cast<ABossCharacter>(OutHit.GetActor())) {
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetActorLocation(), Boss->GetActorLocation(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore, EDrawDebugTrace::ForDuration, LineHit, true);
+
+		if (!LineHit.bBlockingHit && ToggleLock) {
+			LockOnTarget = Boss;
+			IsTargeted = true;
+		}
+		else if (LineHit.bBlockingHit && ToggleLock) {
+			LockOnTarget = NULL;
+			IsTargeted = false;
+		}
+		else if (!LineHit.bBlockingHit && !ToggleLock) {
+			LockOnTarget = NULL;
+			IsTargeted = false;
+		}
+		else if (LineHit.bBlockingHit && !ToggleLock) {
+			LockOnTarget = NULL;
+			IsTargeted = false;
+		}
+
+		Boss->ToggleLockOnTargetWidget(IsTargeted);
 	}
 }
 
@@ -497,6 +535,13 @@ void ARPG_Souls_likeCharacter::SetHealth(int32 const NewHealth)
 	
 }
 
+void ARPG_Souls_likeCharacter::SetVitality(uint32 const NewVitality)
+{
+	CharacterAttribute.CharacterVitality = NewVitality;
+	CharacterAttribute.CharacterMaxHp += 44;
+	CharacterAttribute.CharacterCurrentHp += 44;
+}
+
 void ARPG_Souls_likeCharacter::SetMana(int32 const NewMana)
 {
 	if (NewMana <= 0) {
@@ -506,6 +551,13 @@ void ARPG_Souls_likeCharacter::SetMana(int32 const NewMana)
 		CharacterAttribute.CharacterCurrentMp = NewMana;
 	}
 	
+}
+
+void ARPG_Souls_likeCharacter::SetAttunement(uint32 const NewAttunement)
+{
+	CharacterAttribute.CharacterAttunement = NewAttunement;
+	CharacterAttribute.CharacterMaxMp += 10;
+	CharacterAttribute.CharacterCurrentMp += 10;
 }
 
 void ARPG_Souls_likeCharacter::SetStamina(float const NewStamina)
@@ -518,9 +570,45 @@ void ARPG_Souls_likeCharacter::SetStamina(float const NewStamina)
 	}
 }
 
-void ARPG_Souls_likeCharacter::SetExp(int32 const NewExp)
+void ARPG_Souls_likeCharacter::SetEndurance(uint32 const NewEndurance)
 {
-	CharacterAttribute.CharacterCurrentExp = NewExp;
+	CharacterAttribute.CharacterEndurance = NewEndurance;
+	CharacterAttribute.CharacterMaxStamina += 3.0f;
+}
+
+void ARPG_Souls_likeCharacter::SetExp(uint32 const NewExp)
+{
+	if (NewExp >= CharacterAttribute.CharacterMaxExp) {
+		LevelUp(NewExp);
+	}
+	else {
+		CharacterAttribute.CharacterCurrentExp = NewExp;
+	}
+}
+
+void ARPG_Souls_likeCharacter::SetStrength(uint32 const NewStrength)
+{
+	CharacterAttribute.CharacterStrength = NewStrength;
+}
+
+void ARPG_Souls_likeCharacter::SetAgility(uint32 const NewAgility)
+{
+	CharacterAttribute.CharacterAgility = NewAgility;
+}
+
+void ARPG_Souls_likeCharacter::SetIntelligence(uint32 const NewIntelligence)
+{
+	CharacterAttribute.CharacterIntelligence = NewIntelligence;
+}
+
+void ARPG_Souls_likeCharacter::SetResistance(float const NewResistance)
+{
+	CharacterAttribute.CharacterResistance = NewResistance;
+}
+
+void ARPG_Souls_likeCharacter::SetSkillPoint(uint8 const NewSkillPoint)
+{
+	CharacterAttribute.SkillPoint = NewSkillPoint;
 }
 
 
@@ -533,7 +621,6 @@ void ARPG_Souls_likeCharacter::GettingHit()
 		PlayAnimMontage(BlockImpactMontage, 1.0f, TEXT("Default"));
 	}
 	
-	
 }
 
 void ARPG_Souls_likeCharacter::SpawnWeapon()
@@ -543,49 +630,37 @@ void ARPG_Souls_likeCharacter::SpawnWeapon()
 	SpawnParams.bNoFail = true;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	
 		if (WeaponClass) {
 			FTransform WeaponTransform;
 			WeaponTransform.SetLocation(FVector::ZeroVector);
 			WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
 
+			Weapon = GetWorld()->SpawnActor<ABladeWeapon>(WeaponClass, WeaponTransform, SpawnParams);
+			
+			if (Weapon) {
+					Weapon->SetupWeapon(FName("BlackKnight"));
+					Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_r"));
+					Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
+					Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
+					Weapon->Pickable = false;
+			}
+		}
+
+		if (ShieldClass) {
 			FTransform ShieldTransform;
 			ShieldTransform.SetLocation(FVector::ZeroVector);
 			ShieldTransform.SetRotation(FQuat(FRotator::ZeroRotator));
 
-			Weapon = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
-			Shield = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, ShieldTransform, SpawnParams);
-			
-			if (Weapon) {
-				//UE_LOG(LogTemp, Warning, TEXT("%d"), Weapon->WeaponNum);
-				//if (Weapon->WeaponNum != 0) {
-				//	if (Weapon->WeaponNum == 1) {
-				//		Weapon->WeaponOnHand = FName(TEXT("BlackKnight"));
-				//	}
-				//	else if (Weapon->WeaponNum == 3) {
-				//		Weapon->WeaponOnHand = FName(TEXT("DragonSword"));
-				//	}
-				//	Weapon->SetActorEnableCollision(false);
-					Weapon->SetupWeapon(FName("BlackKnight"));
-					Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_r"));
-					Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
-					Weapon->ShieldCollisionBox->SetHiddenInGame(true);
-					Weapon->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
-					Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
-					Weapon->Pickable = false;
-				//}
-			}
+			Shield = GetWorld()->SpawnActor<AShieldWeapon>(ShieldClass, ShieldTransform, SpawnParams);
 
 			if (Shield) {
 				Shield->SetupWeapon(FName("Shield"));
 				Shield->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("s_hand_l"));
 				Shield->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
 				Shield->MeshComponent->SetRelativeRotation(FQuat(FRotator(0, 0, 0)));
-				Shield->WeaponCollisionBox->SetHiddenInGame(true);
-				Shield->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
 				Shield->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
 				Shield->Pickable = false;
-				
+
 			}
 		}
 		
@@ -605,6 +680,18 @@ void ARPG_Souls_likeCharacter::OnDistract()
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), DistractionSound, Location);
 		UAISense_Hearing::ReportNoiseEvent(GetWorld(), Location, 1.0f, this, 0.0f, Tags::NoiseTag);
 	}
+}
+
+void ARPG_Souls_likeCharacter::LevelUp(uint32 const NewExp)
+{
+	CharacterAttribute.CharacterLevel += 1;
+	CharacterAttribute.CharacterCurrentExp = NewExp - CharacterAttribute.CharacterMaxExp;
+	CharacterAttribute.CharacterMaxExp += 17;
+	CharacterAttribute.SkillPoint += 1;
+
+	LevelParticleComponent = UGameplayStatics::SpawnEmitterAttached(LevelParticleSystem, GetMesh(), "levelup_socket", FVector(0.0f, 0.0f, 0.0f));
+
+	Pc->AttributeUserWidget->DisplayButton();
 }
 
 

@@ -40,6 +40,9 @@ struct FWeaponData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere)
 		float AgilityBuff;
+
+	UPROPERTY(EditAnywhere)
+		FVector BoxExtent;
 };
 
 /**
@@ -55,20 +58,7 @@ public:
 	
 	virtual bool UseItem();
 
-	void SetupWeapon(FName WeaponName);
-
-	FName WeaponOnHand;
-
-	//weapon number
-	uint8 WeaponNum;
-
-	//collision box
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
-		class UBoxComponent* WeaponCollisionBox;
-
-	//collision box
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
-		class UBoxComponent* ShieldCollisionBox;
+	virtual void SetupWeapon(FName WeaponName);
 
 	float Damage;
 

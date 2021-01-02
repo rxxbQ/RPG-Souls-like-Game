@@ -19,8 +19,5 @@ public:
 	UMeleeAttack(FObjectInitializer const& ObjectInitializer);
 
 	EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-
-private:
-	bool MontageHasFinished(AAICharacter* const Ch);
 	
 };

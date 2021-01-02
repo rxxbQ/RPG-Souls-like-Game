@@ -50,6 +50,18 @@ public:
 	class UTextBlock* CharacterPhysics;
 	class UTextBlock* CharacterMagic;
 
+	/* level up buttons*/
+	class UButton* VitalityLevelUp;
+	class UButton* AttunementLevelUp;
+	class UButton* StrengthLevelUp;
+	class UButton* AgilityLevelUp;
+	class UButton* IntelligenceLevelUp;
+	class UButton* EnduranceLevelUp;
+	class UButton* ResistanceLevelUp;
+
+	UFUNCTION()
+		void DisplayButton();
+
 private:
 	class ARPG_Souls_likeCharacter* BaseCharacter;
 
@@ -120,4 +132,36 @@ private:
 	//magic damage
 	UFUNCTION()
 		FText GetMagic();
+
+	// Level Up Vitality event
+	UFUNCTION()
+		void LevelUpVitality();
+
+	// Level Up Attunement event
+	UFUNCTION()
+		void LevelUpAttunement();
+
+	// Level Up Strength event
+	UFUNCTION()
+		void LevelUpStrength();
+
+	// Level Up Agility event
+	UFUNCTION()
+		void LevelUpAgility();
+
+	// Level Up Intelligence event
+	UFUNCTION()
+		void LevelUpIntelligence();
+
+	// Level U pEndurance event
+	UFUNCTION()
+		void LevelUpEndurance();
+
+	// Level Up Resistance event
+	UFUNCTION()
+		void LevelUpResistance();
+
+	void HideButton();
+
+
 };

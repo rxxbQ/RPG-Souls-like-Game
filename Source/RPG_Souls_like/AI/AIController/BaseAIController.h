@@ -23,6 +23,11 @@ public:
     //get blackboard component
     class UBlackboardComponent* GetBlackboard() const;
 
+    //return team id
+    virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
+
+    virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
+
     //blackboard
     //class UBaseBlackboardData* Blackboard;
 
@@ -30,7 +35,7 @@ public:
 
     virtual void OnUnPossess() override;
 
-private:
+protected:
     UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
         //behavior tree component
         class UBehaviorTreeComponent* BehaviorTreeComponent;
@@ -42,9 +47,8 @@ private:
     //blackboard component
     class UBlackboardComponent* BlackboardComponent;
 
+    //sight sense
     class UAISenseConfig_Sight* SightConfig;
-
-    class UAISenseConfig_Hearing* HearingConfig;
 
     //UFUNCTION()
     //   void OnTargetDetected(AActor* actor, FAIStimulus const stimulus);
@@ -52,5 +56,10 @@ private:
     UFUNCTION()
         void OnUpdated(TArray<AActor*> const& UpdatedActors);
 
-    void SetupPerceptionSystem();
+   virtual void SetupPerceptionSystem();
+
+   // team id
+   FGenericTeamId TeamId;
+    
+
 };

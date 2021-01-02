@@ -16,4 +16,6 @@ namespace BbKeys
 	TCHAR const* const PlayerIsInMeleeRange = TEXT("PlayerIsInMeleeRange");
 
 	TCHAR const* const IsInvestigating = TEXT("IsInvestigating");
+
+	TCHAR const* const BattleStart = TEXT("BattleStart");
 }

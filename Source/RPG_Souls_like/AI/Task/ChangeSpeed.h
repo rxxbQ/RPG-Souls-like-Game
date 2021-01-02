@@ -24,6 +24,6 @@ protected:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
-        float Speed = 600.0f;
+        float Speed;
 
 };

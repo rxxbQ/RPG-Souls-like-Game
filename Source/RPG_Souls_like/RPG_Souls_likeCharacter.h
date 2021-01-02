@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Type/StructType.h"
 #include "Sound/SoundBase.h"
+#include "GenericTeamAgentInterface.h"
 #include "RPG_Souls_likeCharacter.generated.h"
 
 /* character attribute */
@@ -74,10 +75,13 @@ struct FCharacterAttribute {
 	//magic damage
 	uint32 CharacterMagicDamage;
 
+	//skill point
+	uint8 SkillPoint;
+
 };
 
 UCLASS(config=Game)
-class ARPG_Souls_likeCharacter : public ACharacter
+class ARPG_Souls_likeCharacter : public ACharacter, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -134,8 +138,6 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
-	
-
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -148,11 +150,15 @@ protected:
 
 	//weapon base
 	UPROPERTY(EditAnywhere)
-		TSubclassOf<class AWeaponItemActor> WeaponClass;
+		TSubclassOf<class ABladeWeapon> WeaponClass;
 
-	class AWeaponItemActor* Weapon;
+	//shield base
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class AShieldWeapon> ShieldClass;
 
-	class AWeaponItemActor* Shield;
+	class ABladeWeapon* Weapon;
+
+	class AShieldWeapon* Shield;
 
 	bool RegenerateStamina;
 
@@ -177,11 +183,30 @@ public:
 
 	void SetHealth(int32 const NewHealth);
 
+	void SetVitality(uint32 const NewVitality);
+
 	void SetMana(int32 const NewMana);
+
+	void SetAttunement(uint32 const NewAttunement);
 
 	void SetStamina(float const NewStamina);
 
-	void SetExp(int32 const NewExp);
+	void SetEndurance(uint32 const NewEndurance);
+
+	void SetExp(uint32 const NewExp);
+
+	void SetStrength(uint32 const NewStrength);
+
+	void SetAgility(uint32 const NewAgility);
+
+	void SetIntelligence(uint32 const NewIntelligence);
+
+	void SetResistance(float const NewResistance);
+
+	void SetSkillPoint(uint8 const NewSkillPoint);
+
+	// return team id
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 
 	/* impact montage*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
@@ -329,5 +354,13 @@ private:
 
 	TArray<AActor*> AlreadyAttackedEnemy;
 
+	/* level up particle system*/
+	UParticleSystem* LevelParticleSystem;
+	UParticleSystemComponent* LevelParticleComponent;
+
+	void LevelUp(uint32 const NewExp);
+
+	// team id
+	FGenericTeamId TeamId;
 };
 

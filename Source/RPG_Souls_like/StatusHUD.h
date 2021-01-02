@@ -16,6 +16,10 @@ class RPG_SOULS_LIKE_API UStatusHUD : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	UStatusHUD(const FObjectInitializer& ObjectInitializer);
+
+	virtual bool Initialize() override;
+
 	void SetHealthValuePercent(float const Value);
 
 	void SetManaValuePercent(float const Value);
@@ -31,4 +35,13 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 		UProgressBar* StaminaValue = nullptr;
+
+	class UTextBlock* CharacterLevel;
+
+private:
+	class ARPG_Souls_likeCharacter* BaseCharacter;
+
+	//level text block
+	UFUNCTION()
+		FText GetLevel();
 };

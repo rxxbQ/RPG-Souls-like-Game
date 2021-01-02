@@ -228,6 +228,91 @@ bool UCharacterAttributeUserWidget::Initialize()
 		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::CharacterMagic == NULL"));
 	}
 
+	/* level up buttons*/
+	//initialize VitalityLevelUp button
+	VitalityLevelUp = Cast<UButton>(GetWidgetFromName("VitalityLevelUp"));
+
+	if (VitalityLevelUp) {
+		VitalityLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		VitalityLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpVitality);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::VitalityLevelUp == NULL"));
+	}
+
+	//initialize AttunementLevelUp button
+	AttunementLevelUp = Cast<UButton>(GetWidgetFromName("AttunementLevelUp"));
+
+	if (AttunementLevelUp) {
+		AttunementLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		AttunementLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpAttunement);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::AttunementLevelUp == NULL"));
+	}
+
+	//initialize StrengthLevelUp button
+	StrengthLevelUp = Cast<UButton>(GetWidgetFromName("StrengthLevelUp"));
+
+	if (StrengthLevelUp) {
+		StrengthLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		StrengthLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpStrength);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::StrengthLevelUp == NULL"));
+	}
+
+	//initialize AgilityLevelUp button
+	AgilityLevelUp = Cast<UButton>(GetWidgetFromName("AgilityLevelUp"));
+
+	if (AgilityLevelUp) {
+		AgilityLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		AgilityLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpAgility);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::AgilityLevelUp == NULL"));
+	}
+
+	//initialize IntelligenceLevelUp button
+	IntelligenceLevelUp = Cast<UButton>(GetWidgetFromName("IntelligenceLevelUp"));
+
+	if (IntelligenceLevelUp) {
+		IntelligenceLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		IntelligenceLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpIntelligence);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::IntelligenceLevelUp == NULL"));
+	}
+
+	//initialize EnduranceLevelUp button
+	EnduranceLevelUp = Cast<UButton>(GetWidgetFromName("EnduranceLevelUp"));
+
+	if (EnduranceLevelUp) {
+		EnduranceLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		EnduranceLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpEndurance);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::EnduranceLevelUp == NULL"));
+	}
+
+	//initialize ResistanceLevelUp button
+	ResistanceLevelUp = Cast<UButton>(GetWidgetFromName("ResistanceLevelUp"));
+
+	if (ResistanceLevelUp) {
+		ResistanceLevelUp->SetVisibility(ESlateVisibility::Hidden);
+
+		ResistanceLevelUp->OnClicked.AddDynamic(this, &UCharacterAttributeUserWidget::LevelUpResistance);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("CharacterAttributeUserWidget.cpp::Initialize()::ResistanceLevelUp == NULL"));
+	}
+
 	return true;
 }
 
@@ -342,4 +427,119 @@ FText UCharacterAttributeUserWidget::GetPhysics()
 FText UCharacterAttributeUserWidget::GetMagic()
 {
 	return BaseCharacter->GetCharacterAttribute(BaseCharacter->GetCharacterProperty().CharacterMagicDamage, TEXT("Magic : "));
+}
+
+void UCharacterAttributeUserWidget::LevelUpVitality()
+{
+	uint32 NewVitality = BaseCharacter->GetCharacterProperty().CharacterVitality + 1;
+	BaseCharacter->SetVitality(NewVitality);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::LevelUpAttunement()
+{
+	uint32 NewAttunement = BaseCharacter->GetCharacterProperty().CharacterAttunement + 1;
+	BaseCharacter->SetAttunement(NewAttunement);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::LevelUpStrength()
+{
+	uint32 NewStrength = BaseCharacter->GetCharacterProperty().CharacterStrength + 1;
+	BaseCharacter->SetStrength(NewStrength);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::LevelUpAgility()
+{
+	uint32 NewAgility = BaseCharacter->GetCharacterProperty().CharacterAgility + 1;
+	BaseCharacter->SetAgility(NewAgility);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::LevelUpIntelligence()
+{
+	uint32 NewIntelligence = BaseCharacter->GetCharacterProperty().CharacterIntelligence + 1;
+	BaseCharacter->SetIntelligence(NewIntelligence);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::LevelUpEndurance()
+{
+	uint32 NewEndurance = BaseCharacter->GetCharacterProperty().CharacterEndurance + 1;
+	BaseCharacter->SetEndurance(NewEndurance);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::LevelUpResistance()
+{
+	float NewResistance = BaseCharacter->GetCharacterProperty().CharacterResistance + 0.05f;
+	BaseCharacter->SetResistance(NewResistance);
+
+	if (BaseCharacter->GetCharacterProperty().SkillPoint > 0) {
+		uint8 NewSkillPoint = BaseCharacter->GetCharacterProperty().SkillPoint - 1;
+		BaseCharacter->SetSkillPoint(NewSkillPoint);
+	}
+	
+	HideButton();
+}
+
+void UCharacterAttributeUserWidget::HideButton()
+{
+	if (BaseCharacter->GetCharacterProperty().SkillPoint <= 0) {
+		VitalityLevelUp->SetVisibility(ESlateVisibility::Hidden);
+		AttunementLevelUp->SetVisibility(ESlateVisibility::Hidden);
+		StrengthLevelUp->SetVisibility(ESlateVisibility::Hidden);
+		AgilityLevelUp->SetVisibility(ESlateVisibility::Hidden);
+		IntelligenceLevelUp->SetVisibility(ESlateVisibility::Hidden);
+		EnduranceLevelUp->SetVisibility(ESlateVisibility::Hidden);
+		ResistanceLevelUp->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void UCharacterAttributeUserWidget::DisplayButton()
+{
+	VitalityLevelUp->SetVisibility(ESlateVisibility::Visible);
+	AttunementLevelUp->SetVisibility(ESlateVisibility::Visible);
+	StrengthLevelUp->SetVisibility(ESlateVisibility::Visible);
+	AgilityLevelUp->SetVisibility(ESlateVisibility::Visible);
+	IntelligenceLevelUp->SetVisibility(ESlateVisibility::Visible);
+	EnduranceLevelUp->SetVisibility(ESlateVisibility::Visible);
+	ResistanceLevelUp->SetVisibility(ESlateVisibility::Visible);
 }

@@ -3,8 +3,8 @@
 
 #include "AICharacter.h"
 #include "AI/AIController/BaseAIController.h"
+#include "AI/AIController/EnemyAIController.h"
 #include "Perception/PawnSensingComponent.h"
-//#include "RPG_Souls_likeCharacter.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -17,15 +17,17 @@
 #include "Components/BoxComponent.h"
 #include "RPG_Souls_likeCharacter.h"
 #include "RPG_Souls_like/Inventory/WeaponItemActor.h"
+#include "RPG_Souls_like/Inventory/BladeWeapon.h"
 #include "RPG_Souls_like/Inventory/ConsumableItemActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "RPG_Souls_like/AI/Blackboard/BlackboardKeys.h"
+#include "Kismet/KismetMathLibrary.h"
 
 //#include "RPG_Souls_like/AI/BlackBoard/BaseBlackboardData.h"
 
 AAICharacter::AAICharacter()
 {
-	AIControllerClass = ABaseAIController::StaticClass();
+	AIControllerClass = AEnemyAIController::StaticClass();
 
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMesh>(TEXT("SkeletalMesh"));
 
@@ -42,7 +44,7 @@ AAICharacter::AAICharacter()
 
 	Health = MaxHealth;
 
-	Exp = 250;
+	Exp = 30;
 
 	AbleToAttack = true;
 
@@ -82,6 +84,12 @@ AAICharacter::AAICharacter()
 		RightFistCollisionBox->SetCollisionProfileName("NoCollision");
 	}
 	*/
+
+	// load attack animation montage
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> AttackMontageObject(TEXT("AnimMontage'/Game/AI/Animation/UE4_Attack_Montage.UE4_Attack_Montage'"));
+	if (AttackMontageObject.Succeeded()) {
+		AttackMontage = AttackMontageObject.Object;
+	}
 
 	// load execution animation montage
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> ExecutionMontageObject(TEXT("AnimMontage'/Game/AI/Animation/Brutal_Assassination_Victim_Montage.Brutal_Assassination_Victim_Montage'"));
@@ -135,6 +143,19 @@ void AAICharacter::Tick(float const DeltaTime)
 		UserWidget->SetBarValuePercent(Health / MaxHealth);
 	}
 
+	if (Health > 0) {
+		ABaseAIController* AIController = Cast<ABaseAIController>(GetController());
+		if (AIController->GetBlackboard()->GetValueAsBool(BbKeys::CanSeePlayer)) {
+			ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+			if (Player) {
+				FRotator LookRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Player->GetActorLocation());
+				FRotator TargetRotation = FRotator(GetActorRotation().Pitch, LookRotation.Yaw, GetActorRotation().Roll);
+				FRotator NewRotation = UKismetMathLibrary::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 5.0f);
+				SetActorRotation(NewRotation);
+			}
+		}
+	}
+
 }
 
 APatrolPath* AAICharacter::GetPatrolPath()
@@ -174,7 +195,7 @@ float AAICharacter::GetMaxHealth() const
 	return MaxHealth;
 }
 
-int AAICharacter::GetExp() const
+uint32 AAICharacter::GetExp() const
 {
 	return Exp;
 }
@@ -219,6 +240,8 @@ bool AAICharacter::CanBeAssassinated()
 
 void AAICharacter::ExecuteStealth()
 {
+	ABaseAIController* const AIController = Cast<ABaseAIController>(GetController());
+	AIController->OnUnPossess();
 	GetCharacterMovement()->DisableMovement();
 	PlayAnimMontage(ExecutionMontage, 1.0f, TEXT("Default"));
 
@@ -241,7 +264,7 @@ void AAICharacter::OnAttackOverlapBegin(UPrimitiveComponent* OverlappedComponent
 	if (!AlreadyDamagedPlayer.Contains(OtherActor)) {
 		if (ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(OtherActor)) {
 			if (Player->AttackBlocked == false) {
-				int32 const NewHealth = Player->GetCharacterProperty().CharacterCurrentHp - Player->GetCharacterProperty().CharacterMaxHp * 0.07;
+				int32 const NewHealth = Player->GetCharacterProperty().CharacterCurrentHp - Player->GetCharacterProperty().CharacterMaxHp * 0.2;
 				Player->SetHealth(NewHealth);
 				
 				AlreadyDamagedPlayer.Add(OtherActor);
@@ -289,32 +312,19 @@ void AAICharacter::SpawnWeapon()
 	SpawnParams.bNoFail = true;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-
 	if (WeaponClass) {
 		FTransform WeaponTransform;
 		WeaponTransform.SetLocation(FVector::ZeroVector);
 		WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
 
-		Weapon = GetWorld()->SpawnActor<AWeaponItemActor>(WeaponClass, WeaponTransform, SpawnParams);
+		Weapon = GetWorld()->SpawnActor<ABladeWeapon>(WeaponClass, WeaponTransform, SpawnParams);
 
 		if (Weapon) {
-			//UE_LOG(LogTemp, Warning, TEXT("%d"), Weapon->WeaponNum);
-			//if (Weapon->WeaponNum != 0) {
-			//	if (Weapon->WeaponNum == 1) {
-			//		Weapon->WeaponOnHand = FName(TEXT("BlackKnight"));
-			//	}
-			//	else if (Weapon->WeaponNum == 3) {
-			//		Weapon->WeaponOnHand = FName(TEXT("DragonSword"));
-			//	}
-			//	Weapon->SetActorEnableCollision(false);
 			Weapon->SetupWeapon(FName("BlackKnight"));
 			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("hand_r_socket"));
 			Weapon->MeshComponent->SetRelativeLocation(FVector(0, 0, 0));
-			Weapon->ShieldCollisionBox->SetHiddenInGame(true);
-			Weapon->ShieldCollisionBox->SetCollisionProfileName("NoCollision");
 			Weapon->WeaponCollisionBox->SetCollisionProfileName("NoCollision");
 			Weapon->Pickable = false;
-			//}
 		}
 	}
 }
@@ -348,7 +358,8 @@ void AAICharacter::ExecuteRadgoll()
 void AAICharacter::Death()
 {
 	ARPG_Souls_likeCharacter* const Ch = Cast<ARPG_Souls_likeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	Ch->SetExp(Ch->GetCharacterProperty().CharacterCurrentExp + Exp);
+	uint32 NewExp = Ch->GetCharacterProperty().CharacterCurrentExp + Exp;
+	Ch->SetExp(NewExp);
 	//SpawnLoot();
 	Destroy();
 	Weapon->Destroy();

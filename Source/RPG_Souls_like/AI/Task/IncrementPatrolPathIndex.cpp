@@ -22,26 +22,29 @@ EBTNodeResult::Type UIncrementPatrolPathIndex::ExecuteTask(UBehaviorTreeComponen
 		AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
 
 		if (Ch) {
-			int const NumOfPoints = Ch->GetPatrolPath()->Num();
-			int const MinIndex = 0;
-			int const MaxIndex = NumOfPoints - 1;
+			if (Ch->NeedToPatrol) {
+				int const NumOfPoints = Ch->GetPatrolPath()->Num();
+				int const MinIndex = 0;
+				int const MaxIndex = NumOfPoints - 1;
 
-			//get and set the blackboard index key
-			int Index = Controller->GetBlackboard()->GetValueAsInt(GetSelectedBlackboardKey());
-			if (Bidirectional) {
-				if (Index >= MaxIndex && Direction == EDirectionType::Forward) {
-					Direction = EDirectionType::Reverse;
+				//get and set the blackboard index key
+				int Index = Controller->GetBlackboard()->GetValueAsInt(GetSelectedBlackboardKey());
+				if (Bidirectional) {
+					if (Index >= MaxIndex && Direction == EDirectionType::Forward) {
+						Direction = EDirectionType::Reverse;
+					}
+					else if (Index == MinIndex && Direction == EDirectionType::Reverse) {
+						Direction = EDirectionType::Forward;
+					}
 				}
-				else if (Index == MinIndex && Direction == EDirectionType::Reverse) {
-					Direction = EDirectionType::Forward;
-				}
+
+				Controller->GetBlackboard()->SetValueAsInt(GetSelectedBlackboardKey(), (Direction == EDirectionType::Forward ? std::abs(++Index) : std::abs(--Index)) % NumOfPoints);
+
 			}
-
-			Controller->GetBlackboard()->SetValueAsInt(GetSelectedBlackboardKey(), (Direction == EDirectionType::Forward ? std::abs(++Index) : std::abs(--Index)) % NumOfPoints);
-
 			//finish with success
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			return EBTNodeResult::Succeeded;
+
 		}
 	}
 	return EBTNodeResult::Failed;

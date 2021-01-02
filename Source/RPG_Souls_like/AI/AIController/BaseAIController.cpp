@@ -23,18 +23,10 @@
 
 ABaseAIController::ABaseAIController(FObjectInitializer const& ObjectInitializer)
 {
-	static ConstructorHelpers::FObjectFinder<UBehaviorTree> Obj(TEXT("BehaviorTree'/Game/AI/Behavior/BaseBT.BaseBT'"));
-
-	if (Obj.Succeeded())
-	{
-		BehaviorTree = Obj.Object;
-	}
-
 	BehaviorTreeComponent = ObjectInitializer.CreateDefaultSubobject<UBehaviorTreeComponent>(this, TEXT("BehaviorTreeComp"));
 	BlackboardComponent = ObjectInitializer.CreateDefaultSubobject<UBlackboardComponent>(this, TEXT("BlackboardComp"));
 
-	SetupPerceptionSystem();
-
+	//SetupPerceptionSystem();
 }
 
 void ABaseAIController::BeginPlay()
@@ -47,6 +39,63 @@ void ABaseAIController::BeginPlay()
 UBlackboardComponent* ABaseAIController::GetBlackboard() const
 {
 	return BlackboardComponent;
+}
+
+ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Other) const
+{
+	// check if actor is a pawn
+	auto OtherPawn = Cast<APawn>(&Other);
+	if (OtherPawn == nullptr) {
+		return ETeamAttitude::Neutral;
+	}
+
+	//check if actor (bot or player) implements IGenericTeamAgentInterface
+	auto igtaiActorBot = Cast<IGenericTeamAgentInterface>(OtherPawn->GetController()); // ActorBot
+	auto igtaiActorPlayer = Cast<IGenericTeamAgentInterface>(&Other); // ActorPlayer
+	if (igtaiActorBot == nullptr && igtaiActorPlayer == nullptr) {
+		return ETeamAttitude::Neutral;
+	}
+
+	//print ActorBot TeamId
+	if (igtaiActorBot != nullptr) {
+		FGenericTeamId fgtiActorBotTeamId = igtaiActorBot->GetGenericTeamId();
+		int iActorBotTeamId = (int)fgtiActorBotTeamId;
+		FString fstrActorBotTeamId = FString::FromInt(iActorBotTeamId);
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, fstrActorBotTeamId);
+	}
+
+	//print ActorPlayer TeamId
+	if (igtaiActorPlayer != nullptr) {
+		FGenericTeamId fgtiActorPlayerTeamId = igtaiActorPlayer->GetGenericTeamId();
+		int iActorPlayerTeamId = (int)fgtiActorPlayerTeamId;
+		FString fstrActorPlayerTeamId = FString::FromInt(iActorPlayerTeamId);
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, fstrActorPlayerTeamId);
+	}
+
+	//get the TeamId of the Actor (bot or player)
+	FGenericTeamId fgtiOtherActorTeamId = NULL;
+	if (igtaiActorBot != nullptr) {
+		fgtiOtherActorTeamId = igtaiActorBot->GetGenericTeamId();
+	}
+	else if (igtaiActorPlayer != nullptr) {
+		fgtiOtherActorTeamId = igtaiActorPlayer->GetGenericTeamId();
+	}
+
+	// determin thisbot attitude towards the otheractor (bot or player) as either Neutral, Friendly, or Hostile
+	FGenericTeamId fgtiThisBotTeamId = this->GetGenericTeamId();
+
+	if (fgtiOtherActorTeamId == 255) { //they are not on a team
+		UE_LOG(LogTemp, Warning, TEXT("Neutral"));
+		return ETeamAttitude::Neutral;
+	}
+	else if (fgtiThisBotTeamId == fgtiOtherActorTeamId) { // they are on the same team
+		UE_LOG(LogTemp, Warning, TEXT("Friendly"));
+		return ETeamAttitude::Friendly;
+	}
+	else { // they are on different teams
+		UE_LOG(LogTemp, Warning, TEXT("Hostile"));
+		return ETeamAttitude::Hostile;
+	}
 }
 
 void ABaseAIController::OnPossess(APawn* const InPawn)
@@ -110,7 +159,20 @@ void ABaseAIController::OnUpdated(TArray<AActor*> const& UpdatedActors)
 				GetBlackboard()->SetValueAsVector(BbKeys::TargetLocation, Stim.StimulusLocation);
 			}
 			else if (Stim.Type.Name == "Default__AISense_Sight") {
-				GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, Stim.WasSuccessfullySensed());
+				if (Stim.WasSuccessfullySensed()) {
+					if (ARPG_Souls_likeCharacter* const Player = Cast<ARPG_Souls_likeCharacter>(UpdatedActors[x])) {
+						GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, true);
+						if (GetBlackboard()->GetValueAsBool(BbKeys::CanSeePlayer)) {
+							GetBlackboard()->SetValueAsBool(BbKeys::BattleStart, true);
+						}
+					}
+					else {
+						GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, false);
+					}
+				}
+				else {
+					GetBlackboard()->SetValueAsBool(BbKeys::CanSeePlayer, false);
+				}
 			}
 		}
 	}
@@ -140,17 +202,5 @@ void ABaseAIController::SetupPerceptionSystem()
 		GetPerceptionComponent()->ConfigureSense(*SightConfig);
 	}
 
-	//create and initialize hearing config object
-	HearingConfig = CreateDefaultSubobject<UAISenseConfig_Hearing>(TEXT("Hearing Config"));
-
-	if (HearingConfig) {
-		HearingConfig->HearingRange = 3000.0f;
-		HearingConfig->DetectionByAffiliation.bDetectEnemies = true;
-		HearingConfig->DetectionByAffiliation.bDetectFriendlies = true;
-		HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
-
-		//add hearing configuration component to perception component
-		GetPerceptionComponent()->OnPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnUpdated);
-		GetPerceptionComponent()->ConfigureSense(*HearingConfig);
-	}
+	GetPerceptionComponent()->OnPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnUpdated);
 }

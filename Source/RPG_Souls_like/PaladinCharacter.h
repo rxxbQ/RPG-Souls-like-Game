@@ -15,8 +15,8 @@ class RPG_SOULS_LIKE_API APaladinCharacter : public ARPG_Souls_likeCharacter
 	GENERATED_BODY()
 
 	/* attack montage*/
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
-		class UAnimMontage* AttackMontage;
+	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+	//	class UAnimMontage* AttackMontage;
 
 	/* cast spell montage*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
@@ -37,6 +37,18 @@ class RPG_SOULS_LIKE_API APaladinCharacter : public ARPG_Souls_likeCharacter
 	/* execution montage*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
 		class UAnimMontage* ExecutionMontage;
+
+	/* slash1 montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* SlashMontage_1;
+
+	/* slah 2 montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* SlashMontage_2;
+
+	/* slah3 montage*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation, meta = (AllowprivateAccess = "true"))
+		class UAnimMontage* SlashMontage_3;
 
 public:
 	APaladinCharacter();

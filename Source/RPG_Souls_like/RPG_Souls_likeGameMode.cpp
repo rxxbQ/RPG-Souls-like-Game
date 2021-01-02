@@ -2,6 +2,7 @@
 
 #include "RPG_Souls_likeGameMode.h"
 #include "PaladinCharacter.h"
+#include "BossCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 #include "CharacterPlayerController.h"
 

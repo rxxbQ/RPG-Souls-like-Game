@@ -16,6 +16,7 @@ public:
 	ARPG_Souls_likeGameMode();
 
 	//void BeginPlay() override;
+
 /*
 private:
 	TSubclassOf<AAICharacter> FAICharacterClass;

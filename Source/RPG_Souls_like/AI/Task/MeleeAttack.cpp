@@ -4,6 +4,7 @@
 #include "MeleeAttack.h"
 //#include "RPG_Souls_like/AI/CombatInterface.h"
 #include "RPG_Souls_like/AI/AIController/BaseAIController.h"
+#include "RPG_Souls_like/BossCharacter.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/World.h"
 #include "Engine/LatentActionManager.h"
@@ -29,11 +30,14 @@ EBTNodeResult::Type UMeleeAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 	}
 	*/
 	if (Controller) {
-		AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn());
-
-		if (Ch) {
-			if (MontageHasFinished(Ch)) {
+		if (AAICharacter* const Ch = Cast<AAICharacter>(Controller->GetPawn())) {
+			if (!Ch->GetMesh()->GetAnimInstance()->Montage_IsPlaying(Ch->GetAttackMontage())) {
 				Ch->MeleeAttack();
+			}
+		}
+		else if (ABossCharacter* const Boss = Cast<ABossCharacter>(Controller->GetPawn())) {
+			if (!Boss->GetMesh()->GetAnimInstance()->Montage_IsPlaying(Boss->GetAttackMontage())) {
+				//Boss->MeleeAttack();
 			}
 		}
 
@@ -43,7 +47,3 @@ EBTNodeResult::Type UMeleeAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 	return EBTNodeResult::Failed;
 }
 
-bool UMeleeAttack::MontageHasFinished(AAICharacter* const Ch)
-{
-	return !Ch->GetMesh()->GetAnimInstance()->Montage_IsPlaying(Ch->GetAttackMontage());
-}
