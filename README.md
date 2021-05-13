@@ -2,4 +2,6 @@
 ```RPG```
 ```Souls-like```
 ``` Stealth``` <br />
-You can choose your initial class. Each class has no difference other than initial attributes. You can level up any of your attributes later on. You can either play stealthily without alerting any enemies like an assassin or fight recklessly like a god of war.
+You can choose your initial class. Each class has no difference other than initial attributes. You can level up any of your attributes later on. You can either play stealthily without alerting any enemies like an assassin or fight recklessly like a god of war.  <br />
+The basic gameplay is to clear the patrols you see on the path and defeat the boss at the end of the path. <br />
+Once you die you will respawn from your spawn point and lose half of your current exp as the penalty. Try not to die :)<br />
