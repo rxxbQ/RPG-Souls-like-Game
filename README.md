@@ -2,7 +2,7 @@
 ```RPG```
 ```Souls-like```
 ``` Stealth``` <br />
-All source codes are in Source/RPG-Souls <br/>
+All source codes are under Source/RPG_Souls_like <br/>
 ## Class
 You can choose your initial class. Each class has no difference other than initial attributes. You can level up any of your attributes later on.  <br />
 ## GamePlay
